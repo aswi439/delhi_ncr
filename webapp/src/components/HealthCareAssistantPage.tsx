@@ -115,13 +115,22 @@ export function HealthCareAssistantPage({
     const cleanText = cleanMarkdownForSpeech(text);
     if (!cleanText) return;
 
+    const targetLangCode = language === "hi" ? "hi" : language === "ta" ? "ta" : "en";
+    const targetLocale = language === "hi" ? "hi-IN" : language === "ta" ? "ta-IN" : "en-US";
+
     const utterance = new SpeechSynthesisUtterance(cleanText);
-    utterance.lang = "en-US";
+    utterance.lang = targetLocale;
     utterance.rate = 1.0;
     utterance.pitch = 1.0;
 
     const voices = window.speechSynthesis.getVoices();
-    const naturalVoice =
+    const targetVoice =
+      voices.find(
+        (v) =>
+          v.lang.toLowerCase().replace("_", "-") === targetLocale.toLowerCase() ||
+          v.lang.toLowerCase().startsWith(targetLangCode)
+      ) ||
+      voices.find((v) => v.lang.toLowerCase().includes(targetLangCode)) ||
       voices.find(
         (v) =>
           v.lang.startsWith("en") &&
@@ -129,13 +138,11 @@ export function HealthCareAssistantPage({
             v.name.includes("Google") ||
             v.name.includes("Samantha") ||
             v.name.includes("Jenny") ||
-            v.name.includes("Microsoft") ||
-            v.name.includes("Karen") ||
-            v.name.includes("Zira"))
-      ) || voices.find((v) => v.lang.startsWith("en"));
+            v.name.includes("Microsoft"))
+      );
 
-    if (naturalVoice) {
-      utterance.voice = naturalVoice;
+    if (targetVoice) {
+      utterance.voice = targetVoice;
     }
 
     utterance.onstart = () => {
@@ -550,14 +557,32 @@ export function HealthCareAssistantPage({
                 cursor: "pointer",
                 transition: "all 0.15s ease",
               }}
-              title="Toggle reading replies aloud in English"
+              title={
+                language === "hi"
+                  ? "उत्तरों को बोलकर सुनना चालू/बंद करें"
+                  : language === "ta"
+                  ? "பதில்களை குரலில் கேட்க ஆன்/ஆஃப் செய்யவும்"
+                  : "Toggle reading replies aloud"
+              }
             >
               {isAutoSpeak ? (
                 <Volume2 size={13} style={{ color: "var(--cyan)" }} />
               ) : (
                 <VolumeX size={13} />
               )}
-              <span>{isAutoSpeak ? "Read Aloud: ON" : "Read Aloud: OFF"}</span>
+              <span>
+                {language === "hi"
+                  ? isAutoSpeak
+                    ? "आवाज़: चालू"
+                    : "आवाज़: बंद"
+                  : language === "ta"
+                  ? isAutoSpeak
+                    ? "குரல்: ஆன்"
+                    : "குரல்: ஆஃப்"
+                  : isAutoSpeak
+                  ? "Voice: ON"
+                  : "Voice: OFF"}
+              </span>
             </button>
 
             <button
