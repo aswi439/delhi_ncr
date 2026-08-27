@@ -313,16 +313,15 @@ export default function App() {
 
       <Boot boot={data.boot} ready={data.ready} />
 
-      {/* Progressive Gradual Blur Overlay at Website Bottom */}
+      {/* Progressive Gradual Blur Overlay at Website Bottom (GPU Optimized) */}
       <GradualBlur
         target="page"
         position="bottom"
-        height="6rem"
-        strength={2.5}
-        divCount={6}
+        height="5rem"
+        strength={1.8}
+        divCount={2}
         curve="bezier"
-        exponential={true}
-        opacity={1}
+        opacity={0.85}
         zIndex={35}
       />
     </>

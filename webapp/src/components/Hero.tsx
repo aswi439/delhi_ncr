@@ -297,7 +297,7 @@ export function Hero({
         width: "100%",
       }}
     >
-      {/* ── 1. STACKED FULLSCREEN VIDEOS (Z -3) ── */}
+      {/* ── 1. FULLSCREEN BACKGROUND VIDEO (Z -3) ── */}
       <div
         style={{
           position: "absolute",
@@ -309,32 +309,26 @@ export function Hero({
           zIndex: -3,
         }}
       >
-        {HERO_VIDEOS.map((video, idx) => (
-          <video
-            key={video.id}
-            ref={(el) => {
-              videoRefs.current[idx] = el;
-            }}
-            src={video.url}
-            autoPlay
-            muted
-            loop
-            playsInline
-            preload="auto"
-            aria-hidden="true"
-            style={{
-              position: "absolute",
-              inset: 0,
-              width: "100%",
-              height: "100%",
-              objectFit: "cover",
-              transition: "opacity 800ms ease-in-out",
-              opacity: activeVideo === idx ? 1 : 0,
-              willChange: "opacity",
-              transform: "translateZ(0)",
-            }}
-          />
-        ))}
+        <video
+          key={HERO_VIDEOS[activeVideo]?.id || "golden-hour"}
+          src={HERO_VIDEOS[activeVideo]?.url || HERO_VIDEOS[0].url}
+          autoPlay
+          muted
+          loop
+          playsInline
+          preload="auto"
+          aria-hidden="true"
+          style={{
+            position: "absolute",
+            inset: 0,
+            width: "100%",
+            height: "100%",
+            objectFit: "cover",
+            transform: "translateZ(0)",
+            backfaceVisibility: "hidden",
+            WebkitBackfaceVisibility: "hidden",
+          }}
+        />
       </div>
 
       {/* ── 2. TRANSPARENT PNG OVERLAY WITH TRAIN-BOB MOTION (Z -2) ── */}
@@ -359,10 +353,7 @@ export function Hero({
             width: "100%",
             height: "100%",
             objectFit: "cover",
-            transform: "translate3d(0, 0, 0)",
-            willChange: "transform",
-            backfaceVisibility: "hidden",
-            WebkitBackfaceVisibility: "hidden",
+            pointerEvents: "none",
           }}
         />
       </div>
