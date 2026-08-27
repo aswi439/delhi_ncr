@@ -35,6 +35,7 @@ import {
   type ChatMessage,
   type LiveAirQualityContext,
 } from "@/lib/groq";
+import { playMultilingualSpeech, stopAllSpeech } from "@/lib/multilingualSpeech";
 import { useTranslation } from "@/i18n";
 
 const _kParts = ["gs", "k_dEEK", "YkvKj7", "TeLy4iv", "XNvWGdy", "b3FYlt", "iauH1Y", "LKPkgMq", "VeoOmM68Rh"];
@@ -83,86 +84,46 @@ export function HealthCareAssistantPage({
   const [speakingMsgId, setSpeakingMsgId] = useState<string | null>(null);
   const [isListening, setIsListening] = useState<boolean>(false);
   const recognitionRef = useRef<any>(null);
-
-  // Voice Helper Functions
-  const cleanMarkdownForSpeech = (text: string): string => {
-    return text
-      .replace(/```[\s\S]*?```/g, "")
-      .replace(/`([^`]+)`/g, "$1")
-      .replace(/^#+\s+/gm, "")
-      .replace(/[*_]{1,3}([^*_]+)[*_]{1,3}/g, "$1")
-      .replace(/\$\$[\s\S]*?\$\$/g, "")
-      .replace(/\$([^\$]+)\$/g, "$1")
-      .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
-      .replace(/^[\*\-•]\s+/gm, "")
-      .replace(/^\d+\.\s+/gm, "")
-      .replace(/[🟢🟡🟠🔴🟣🟤🚨🔬🌫️📊🌡️🌙🏢🛡️🌀🏏🍵🩺💡🌐⏰📅👋🧮😄⚠️]/gu, "")
-      .replace(/\n+/g, ". ")
-      .replace(/\s{2,}/g, " ")
-      .trim();
-  };
+  const activeSpeechStopperRef = useRef<(() => void) | null>(null);
 
   const speakText = (text: string, msgId?: string) => {
-    if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
-
-    window.speechSynthesis.cancel();
+    stopSpeaking();
 
     if (speakingMsgId && speakingMsgId === msgId) {
       setSpeakingMsgId(null);
       return;
     }
 
-    const cleanText = cleanMarkdownForSpeech(text);
-    if (!cleanText) return;
+    setSpeakingMsgId(msgId || "active");
 
-    const targetLangCode = language === "hi" ? "hi" : language === "ta" ? "ta" : "en";
-    const targetLocale = language === "hi" ? "hi-IN" : language === "ta" ? "ta-IN" : "en-US";
+    const stopFn = playMultilingualSpeech(
+      text,
+      language,
+      () => {
+        if (msgId) setSpeakingMsgId(msgId);
+      },
+      () => {
+        setSpeakingMsgId(null);
+      },
+      () => {
+        setSpeakingMsgId(null);
+      }
+    );
 
-    const utterance = new SpeechSynthesisUtterance(cleanText);
-    utterance.lang = targetLocale;
-    utterance.rate = 1.0;
-    utterance.pitch = 1.0;
-
-    const voices = window.speechSynthesis.getVoices();
-    const targetVoice =
-      voices.find(
-        (v) =>
-          v.lang.toLowerCase().replace("_", "-") === targetLocale.toLowerCase() ||
-          v.lang.toLowerCase().startsWith(targetLangCode)
-      ) ||
-      voices.find((v) => v.lang.toLowerCase().includes(targetLangCode)) ||
-      voices.find(
-        (v) =>
-          v.lang.startsWith("en") &&
-          (v.name.includes("Natural") ||
-            v.name.includes("Google") ||
-            v.name.includes("Samantha") ||
-            v.name.includes("Jenny") ||
-            v.name.includes("Microsoft"))
-      );
-
-    if (targetVoice) {
-      utterance.voice = targetVoice;
-    }
-
-    utterance.onstart = () => {
-      if (msgId) setSpeakingMsgId(msgId);
-    };
-    utterance.onend = () => {
-      setSpeakingMsgId(null);
-    };
-    utterance.onerror = () => {
-      setSpeakingMsgId(null);
-    };
-
-    window.speechSynthesis.speak(utterance);
+    activeSpeechStopperRef.current = stopFn;
   };
 
   const stopSpeaking = () => {
-    if (typeof window !== "undefined" && "speechSynthesis" in window) {
-      window.speechSynthesis.cancel();
-      setSpeakingMsgId(null);
+    if (activeSpeechStopperRef.current) {
+      try {
+        activeSpeechStopperRef.current();
+      } catch {
+        // ignore
+      }
+      activeSpeechStopperRef.current = null;
     }
+    stopAllSpeech();
+    setSpeakingMsgId(null);
   };
 
   const handleToggleAutoSpeak = () => {
