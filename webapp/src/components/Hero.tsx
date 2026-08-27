@@ -75,29 +75,29 @@ interface AqiLevelSegment {
 }
 
 const AQI_LEVELS: readonly AqiLevelSegment[] = [
-  { name: "Good", min: 0, max: 50, color: "#00B050", label: "0-50" },
-  { name: "Moderate", min: 51, max: 100, color: "#92D050", label: "51-100" },
-  { name: "Poor", min: 101, max: 200, color: "#FFD700", label: "101-200" },
-  { name: "Unhealthy", min: 201, max: 300, color: "#FF9900", label: "201-300" },
-  { name: "Severe", min: 301, max: 400, color: "#FF0000", label: "301-400" },
-  { name: "Hazardous", min: 401, max: 500, color: "#700020", label: "301+" },
+  { name: "Good", min: 0, max: 50, color: "#8ceb8c", label: "0-50" },
+  { name: "Satisfactory", min: 51, max: 100, color: "#ffff00", label: "51-100" },
+  { name: "Moderate", min: 101, max: 200, color: "#ff9900", label: "101-200" },
+  { name: "Poor", min: 201, max: 300, color: "#ff6666", label: "201-300" },
+  { name: "Very Poor", min: 301, max: 400, color: "#af52de", label: "301-400" },
+  { name: "Hazardous", min: 401, max: 500, color: "#800000", label: "401-500" },
 ] as const;
 
 function aqiToScalePercent(aqi: number): number {
   if (aqi <= 0) return 2;
   if (aqi >= 500) return 98;
   if (aqi <= 50) {
-    return (aqi / 50) * 16.66;
+    return (aqi / 50) * 16.666;
   } else if (aqi <= 100) {
-    return 16.66 + ((aqi - 50) / 50) * 16.67;
+    return 16.666 + ((aqi - 50) / 50) * 16.667;
   } else if (aqi <= 200) {
-    return 33.33 + ((aqi - 100) / 100) * 16.67;
+    return 33.333 + ((aqi - 100) / 100) * 16.667;
   } else if (aqi <= 300) {
-    return 50.0 + ((aqi - 200) / 100) * 16.66;
+    return 50.0 + ((aqi - 200) / 100) * 16.667;
   } else if (aqi <= 400) {
-    return 66.66 + ((aqi - 300) / 100) * 16.67;
+    return 66.667 + ((aqi - 300) / 100) * 16.667;
   } else {
-    return 83.33 + Math.min(1, (aqi - 400) / 100) * 14.5;
+    return 83.334 + Math.min(1, (aqi - 400) / 100) * 14.5;
   }
 }
 
@@ -629,9 +629,8 @@ export function Hero({
                     }}
                   >
                     {AQI_LEVELS.map((lvl) => {
-                      const isCurrent = displayCategory.toLowerCase() === lvl.name.toLowerCase() ||
-                        (lvl.name === "Moderate" && displayCategory.toLowerCase() === "satisfactory") ||
-                        (lvl.name === "Unhealthy" && displayCategory.toLowerCase() === "poor") ||
+                      const isCurrent =
+                        displayCategory.toLowerCase() === lvl.name.toLowerCase() ||
                         (lvl.name === "Hazardous" && displayCategory.toLowerCase() === "severe");
                       return (
                         <span
@@ -751,19 +750,19 @@ export function Hero({
                       justifyContent: "space-between",
                       fontSize: "9.5px",
                       fontFamily: "var(--mono)",
-                      color: "rgba(255, 255, 255, 0.6)",
+                      color: "rgba(255, 255, 255, 0.75)",
                       marginTop: "0.65rem",
                       padding: "0 2px",
-                      textShadow: "0 1px 3px rgba(0,0,0,0.6)",
+                      textShadow: "0 1px 3px rgba(0,0,0,0.8)",
                     }}
                   >
                     <span>0</span>
                     <span>50</span>
                     <span>100</span>
-                    <span>150</span>
                     <span>200</span>
                     <span>300</span>
-                    <span>301+</span>
+                    <span>400</span>
+                    <span>500</span>
                   </div>
                 </div>
 

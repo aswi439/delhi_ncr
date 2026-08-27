@@ -24,15 +24,13 @@
   --mist-dim: #5C7183;
   --mist-faint: #3E4E5C;
 
-  /* ── CPCB National AQI (2014) ramp, tuned for a dark ground ─────────── */
-  --aqi-1: #4FB477;   /* 0–50    Good          */
-  --aqi-2: #9FC93C;   /* 51–100  Satisfactory  */
-  --aqi-3: #EFC02D;   /* 101–200 Moderate      */
-  --aqi-4: #F2892F;   /* 201–300 Poor          */
-  --aqi-5: #E8503C;   /* 301–400 Very Poor     */
-  /* CPCB prints Severe as a dark maroon, which disappears on this ground.
-     Pushed toward magenta so it reads as "past red" and stays legible. */
-  --aqi-6: #C0356A;
+  /* ── CPCB National AQI (2014) ramp from reference image ─────────── */
+  --aqi-1: #8ceb8c;   /* 0–50    Good          */
+  --aqi-2: #ffff00;   /* 51–100  Satisfactory  */
+  --aqi-3: #ff9900;   /* 101–200 Moderate      */
+  --aqi-4: #ff6666;   /* 201–300 Poor          */
+  --aqi-5: #af52de;   /* 301–400 Very Poor     */
+  --aqi-6: #800000;   /* 401–500 Hazardous     */
 
   /* Bound at runtime to the scrubbed hour's category, so accents follow the air */
   --live: var(--mist);

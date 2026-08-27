@@ -11,14 +11,14 @@
 import type { AqiCategory } from "./types";
 import { AQI_CATEGORIES } from "./types";
 
-/** Tuned ramp, kept byte-for-byte in sync with tokens.css --aqi-1..6. */
+/** Ramp matching reference image colors. */
 export const AQI_HEX: Record<AqiCategory, string> = {
-  Good: "#4FB477",
-  Satisfactory: "#9FC93C",
-  Moderate: "#EFC02D",
-  Poor: "#F2892F",
-  "Very Poor": "#E8503C",
-  Severe: "#C0356A",
+  Good: "#8ceb8c",
+  Satisfactory: "#ffff00",
+  Moderate: "#ff9900",
+  Poor: "#ff6666",
+  "Very Poor": "#af52de",
+  Severe: "#800000",
 };
 
 /** The corresponding CSS custom property, for cases where the live var is wanted. */
