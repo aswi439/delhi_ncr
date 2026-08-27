@@ -201,38 +201,39 @@ export default function MapLeaflet({
 
       {/* Delhi-Only Industrial Facilities & Power Stations */}
       {layers.industries && industries.length > 0
-        ? industries.map((ind, i) => (
-            <Fragment key={ind.id ? `ind-${ind.id}` : `ind-${i}`}>
+        ? industries.map((ind, i) => {
+            const isAnchor = ind.category === "power" || ind.name.toLowerCase().includes("power") || ind.name.toLowerCase().includes("waste to energy") || ind.name.toLowerCase().includes("wte");
+            const r = isAnchor ? 6.5 : 4.2;
+            const fillColor = isAnchor ? "#f59e0b" : "#a855f7";
+            const strokeColor = isAnchor ? "#ffffff" : "#6b21a8";
+
+            return (
               <CircleMarker
+                key={ind.id ? `ind-${ind.id}` : `ind-${i}`}
                 center={[ind.latitude, ind.longitude]}
-                radius={8}
-                pane="ncrGlow"
-                interactive={false}
-                pathOptions={{ stroke: false, fillColor: "#a855f7", fillOpacity: 0.35 }}
-              />
-              <CircleMarker
-                center={[ind.latitude, ind.longitude]}
-                radius={5.5}
+                radius={r}
                 pane="ncrIndustries"
                 pathOptions={{
-                  color: "#ffffff",
-                  weight: 1.5,
-                  fillColor: "#9333ea",
-                  fillOpacity: 1,
+                  color: strokeColor,
+                  weight: isAnchor ? 2 : 1,
+                  fillColor: fillColor,
+                  fillOpacity: 0.95,
                 }}
               >
-                <Tooltip direction="top" offset={[0, -6]}>
-                  <div style={{ padding: "2px 4px", fontSize: "11px", lineHeight: "1.4" }}>
-                    <strong style={{ color: "#c084fc", display: "block" }}>🏭 {ind.name}</strong>
+                <Tooltip direction="top" offset={[0, -5]}>
+                  <div style={{ padding: "3px 5px", fontSize: "11px", lineHeight: "1.4" }}>
+                    <strong style={{ color: isAnchor ? "#fbbf24" : "#c084fc", display: "block" }}>
+                      {isAnchor ? "⚡ " : "🏭 "}{ind.name}
+                    </strong>
                     <span style={{ color: "#94a3b8", display: "block" }}>{ind.sector || ind.category || "Industrial Source"}</span>
                     <span style={{ color: "#38bdf8", fontSize: "10px", display: "block" }}>
-                      📍 {ind.city}, {ind.state} {ind.capacity ? `• ${ind.capacity}` : ""}
+                      📍 {ind.city}, {ind.state} {ind.address ? `• ${ind.address.split(",")[0]}` : ""}
                     </span>
                   </div>
                 </Tooltip>
               </CircleMarker>
-            </Fragment>
-          ))
+            );
+          })
         : null}
 
       {/* Stations: a soft AQI "plume" glow behind a clickable dot */}
