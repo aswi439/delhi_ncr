@@ -124,6 +124,33 @@ export function generateClinicalResponse(
     };
   }
 
+  if (
+    q.includes("highest aqi") ||
+    q.includes("highest recorded") ||
+    q.includes("history of delhi") ||
+    q.includes("worst aqi") ||
+    q.includes("maximum aqi") ||
+    q.includes("ever recorded")
+  ) {
+    return {
+      modelUsed: "Clinical Intelligence Specialist (Delhi Air Brain)",
+      source: "expert-rules",
+      content: `### 📜 Highest Air Quality Index (AQI) Ever Recorded in Delhi's History
+
+Delhi has faced multiple catastrophic pollution emergencies in recent history:
+
+1. **Official CPCB Ceiling Hits (AQI 494–500):**
+   - **November 3, 2019:** The official 24-hour city average AQI reached **494**, with individual monitoring stations (like Bawana and Anand Vihar) hitting the maximum theoretical sensor ceiling of **500 (Hazardous)**.
+   - **November 18, 2024:** Delhi's 24-hour average AQI surged to **494**, triggering emergency **GRAP Stage 4** enforcement.
+2. **Local Hourly Spikes (PM2.5 > 1,000–1,500 µg/m³):**
+   - During severe post-Diwali and peak November stubble-burning episodes (combined with dense thermal inversions), local real-time particulate monitors in hotspots like **Anand Vihar, Jahangirpuri, and Wazirpur** have recorded hourly PM2.5 concentrations exceeding **1,000 to 1,500 µg/m³** (over **100× the WHO safe 24-hour limit**).
+3. **Primary Drivers of Historical Peaks:**
+   - Calm surface winds (<1 km/h) preventing horizontal ventilation.
+   - Severe thermal inversion ($\Delta T$) trapping emissions within a 100–150m boundary layer.
+   - Concurrent influx of agricultural stubble-burning plumes from northwest India.`,
+    };
+  }
+
   // ──────────────────────────────────────────────────────────────────────────
   // 2. GENERAL KNOWLEDGE & TRIVIA
   // ──────────────────────────────────────────────────────────────────────────
