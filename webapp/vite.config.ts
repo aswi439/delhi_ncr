@@ -10,7 +10,7 @@ import path from 'path'
 // A non-root, absolute base makes every emitted asset URL /console/… so it
 // resolves under the mount, while /api/v1 stays absolute and hits the backend.
 export default defineConfig({
-  base: '/console/',
+  base: '/',
   assetsInclude: ['**/*.glb'],
   plugins: [react(), tailwindcss()],
   resolve: {
