@@ -39,7 +39,7 @@ export function generateClinicalResponse(
   const isHighRiseFloor = q.includes("floor") || q.includes("high rise") || q.includes("10th floor") || q.includes("14th floor") || q.includes("20th floor") || q.includes("balcony") || q.includes("height") || q.includes("मंजिल") || q.includes("மாடி");
   const isWindowVentilation = q.includes("window") || q.includes("ventilat") || q.includes("door") || q.includes("open window") || q.includes("खिड़की") || q.includes("ஜன்னல்");
   const isHumidifier = q.includes("humidifier") || q.includes("steam") || q.includes("nebuliz") || q.includes("moisture") || q.includes("ह्यूमिडिफायर") || q.includes("भाप") || q.includes("நீராவி");
-  const isPurifierBrand = q.includes("dyson") || q.includes("philips") || q.includes("coway") || q.includes("xiaomi") || q.includes("mi purifier") || q.includes("levoit") || q.includes("sharp") || q.includes("best purifier") || q.includes("which purifier") || q.includes("cadr");
+  const isPurifier = q.includes("dyson") || q.includes("philips") || q.includes("coway") || q.includes("xiaomi") || q.includes("mi purifier") || q.includes("levoit") || q.includes("sharp") || q.includes("best purifier") || q.includes("which purifier") || q.includes("cadr") || q.includes("purifier") || q.includes("hepa") || q.includes("filter") || q.includes("room") || q.includes("indoor") || q.includes("प्यूरीफायर") || q.includes("फिल्टर") || q.includes("பியூரிஃபையர்") || q.includes("ஏர் ப்யூரிஃபையர்");
   const isStubbleVsTraffic = q.includes("stubble") || q.includes("parali") || q.includes("traffic") || q.includes("source") || q.includes("cause") || q.includes("who is responsible") || q.includes("vehicle") || q.includes("industry") || q.includes("पराली") || q.includes("गाड़ी") || q.includes("காரணம்");
   const isLeaveDelhi = q.includes("leave delhi") || q.includes("move away") || q.includes("shift from delhi") || q.includes("escape") || q.includes("दिल्ली छोड़") || q.includes("டெல்லியை விட்டு");
   const isCigarette = q.includes("cigarette") || q.includes("smoking") || q.includes("smoke equal") || q.includes("बीड़ी") || q.includes("सिगरेट") || q.includes("சிகரெட்");
@@ -51,8 +51,7 @@ export function generateClinicalResponse(
   const isAsthma = q.includes("asthma") || q.includes("inhaler") || q.includes("copd") || q.includes("bronch") || q.includes("salbutamol") || q.includes("budesonide") || q.includes("foracort") || q.includes("asthelin") || q.includes("spacer") || q.includes("अस्थमा") || q.includes("दमा") || q.includes("इनहेलर") || q.includes("ஆஸ்துமா") || q.includes("இன்ஹேலர்");
   const isMask = q.includes("mask") || q.includes("n95") || q.includes("surgical") || q.includes("cloth") || q.includes("kn95") || q.includes("ffp2") || q.includes("wash") || q.includes("reusable") || q.includes("मास्क") || q.includes("सर्जिकल") || q.includes("முகக்கவசம்") || q.includes("மாஸ்க்");
   const isPediatric = q.includes("child") || q.includes("baby") || q.includes("kid") || q.includes("school") || q.includes("pregnan") || q.includes("infant") || q.includes("newborn") || q.includes("toddler") || q.includes("बच्चे") || q.includes("गर्भवती") || q.includes("शिशु") || q.includes("स्कूल") || q.includes("குழந்தை") || q.includes("கர்ப்பிணி");
-  const isPurifier = q.includes("purifier") || q.includes("hepa") || q.includes("filter") || q.includes("room") || q.includes("indoor") || q.includes("प्यूरीफायर") || q.includes("फिल्टर") || q.includes("பியூரிஃபையர்") || q.includes("ஏர் ப்யூரிஃபையர்");
-  const isEmergency = q.includes("emergency") || q.includes("hospital") || q.includes("danger") || q.includes("red flag") || q.includes("chest pain") || q.includes("shortness of breath") || q.includes("heart") || q.includes("faint") || q.includes("ambulance") || q.includes("आपात") || q.includes("अस्पताल") || q.includes("खतरा") || q.includes("अவசர") || q.includes("மருத்துவமனை");
+  const isEmergency = q.includes("emergency") || q.includes("hospital") || q.includes("danger") || q.includes("red flag") || q.includes("chest pain") || q.includes("shortness of breath") || q.includes("heart") || q.includes("faint") || q.includes("ambulance") || q.includes("आपात") || q.includes("अस्पताल") || q.includes("खतरा") || q.includes("அவசர") || q.includes("மருத்துவமனை");
   const isSymptoms = q.includes("symptom") || q.includes("cough") || q.includes("throat") || q.includes("eye") || q.includes("burn") || q.includes("mucus") || q.includes("phlegm") || q.includes("headache") || q.includes("itch") || q.includes("burning") || q.includes("खांसी") || q.includes("गले") || q.includes("आंख") || q.includes("जलन") || q.includes("सिरदर्द") || q.includes("இருமல்") || q.includes("தொண்டை") || q.includes("எரிச்சல்");
   const isMeteorology = q.includes("inversion") || q.includes("smog") || q.includes("winter") || q.includes("wind") || q.includes("rain") || q.includes("fog") || q.includes("mixing depth") || q.includes("धुंध") || q.includes("सर्दी") || q.includes("வானிலை");
 
@@ -105,7 +104,7 @@ export function generateClinicalResponse(
 
 1. **थर्मल इनवर्जन (Temperature Inversion):** दिन में धूप से जमीन गर्म होती है और हवा ऊपर उठती है। लेकिन रात में जमीन तेजी से ठंडी होती है, जिससे ऊपर की गर्म हवा एक 'ढक्कन' (Lid) की तरह काम करती है और सारा धुआं जमीन के पास कैद हो जाता है।
 2. **मिक्सिंग लेयर का सिकुड़ना:** दोपहर में मिक्सिंग गहराई 1500m+ होती है, जो रात में सिकुड़कर मात्र **${pbl} मीटर** रह जाती है।
-3. **शांत हवाएं (Calm Winds):** रात में हवा की गति 1-2 km/h से भी कम हो जाती है, जिससे गाड़ियों और उद्योगों का धुआं फैल नहीं पाता।
+3. **शांत हवाएं (Calm Winds):** रात में हवा की गति 1-2 km/h से भी कम हो जाती है, जिससे गाड़ियों और उद्योगों का धुआं फैल नहीं पाता।
 
 **सलाह:** रात 8 बजे के बाद और सुबह 9 बजे से पहले खिड़कियां पूरी तरह बंद रखें।`,
       };
@@ -140,7 +139,7 @@ export function generateClinicalResponse(
       };
     }
 
-    if (isPurifierBrand) {
+    if (isPurifier) {
       return {
         modelUsed: "Clinical Intelligence Specialist (Delhi Air Brain)",
         source: "expert-rules",
@@ -417,7 +416,7 @@ Given Delhi's current **${aqi} AQI** and **${pm25} µg/m³ PM2.5**:
     };
   }
 
-  if (isPurifierBrand) {
+  if (isPurifier) {
     return {
       modelUsed: "Clinical Intelligence Specialist (Delhi Air Brain)",
       source: "expert-rules",
