@@ -2,6 +2,7 @@ import { ArrowLeft, History } from "lucide-react";
 import { HistoricalData } from "@/components/HistoricalData";
 import { Footer } from "@/components/Footer";
 import type { Panel } from "@/hooks/useForecastData";
+import { useTranslation } from "@/i18n";
 import type {
   CityAggregateResponse,
   ConsensusResponse,
@@ -26,6 +27,7 @@ export function HistoricDataPage({
   cityAggregate,
   onBack,
 }: HistoricDataPageProps) {
+  const { t } = useTranslation();
   const currentAqi =
     cityAggregate?.overall_aqi ??
     (consensus?.metrics ? Math.round(consensus.metrics.aqi) : (hour ? hour.aqi : 315));
@@ -76,7 +78,7 @@ export function HistoricDataPage({
             onClick={onBack}
           >
             <ArrowLeft size={15} />
-            <span>← Back to Live Overview</span>
+            <span>{t("common.backToOverview")}</span>
           </button>
 
           <div style={{ display: "flex", alignItems: "center", gap: "0.8rem" }}>

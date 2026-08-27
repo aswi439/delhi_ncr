@@ -4,6 +4,7 @@ import { CouplingLoop } from "@/components/CouplingLoop";
 import { InversionStrip } from "@/components/InversionStrip";
 import type { Cursor } from "@/hooks/useCursor";
 import type { Panel } from "@/hooks/useForecastData";
+import { useTranslation } from "@/i18n";
 import type {
   CityAggregateResponse,
   ConsensusResponse,
@@ -31,6 +32,7 @@ export function AtmosphericDynamicsPage({
   cityAggregate,
   onBack,
 }: AtmosphericDynamicsPageProps) {
+  const { t } = useTranslation();
   return (
     <div
       style={{
@@ -77,7 +79,7 @@ export function AtmosphericDynamicsPage({
             onClick={onBack}
           >
             <ArrowLeft size={15} />
-            <span>← Back to Live Overview</span>
+            <span>{t("common.backToOverview")}</span>
           </button>
 
           <div style={{ display: "flex", alignItems: "center", gap: "0.8rem" }}>

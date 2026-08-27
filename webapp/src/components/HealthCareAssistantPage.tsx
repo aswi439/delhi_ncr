@@ -28,6 +28,7 @@ import {
   type ChatMessage,
   type LiveAirQualityContext,
 } from "@/lib/groq";
+import { useTranslation } from "@/i18n";
 
 const DEFAULT_GROQ_KEY = ((import.meta.env.VITE_GROQ_API_KEY as string) || "");
 
@@ -81,6 +82,7 @@ export function HealthCareAssistantPage({
   cityAggregate,
   onBack,
 }: HealthCareAssistantPageProps) {
+  const { t, language } = useTranslation();
   const [apiKey] = useState<string>(() => {
     if (typeof window !== "undefined") {
       return localStorage.getItem("delhi_aqi_groq_api_key") || DEFAULT_GROQ_KEY;
@@ -108,9 +110,11 @@ export function HealthCareAssistantPage({
     {
       id: "welcome-1",
       role: "assistant",
-      content: `Hello! I am your **Delhi NCR Health Care Assistant & Clinical Air Specialist**.
-
-Ask me any specific question about respiratory symptoms, medication management, N95 mask protection, HEPA purifier settings, or safe outdoor schedules. I will give you direct, evidence-based answers tailored to Delhi's air quality.`,
+      content: language === "hi"
+        ? `नमस्ते! मैं आपका **दिल्ली-एनसीआर श्वसन स्वास्थ्य सहायक एवं क्लीनिकल विशेषज्ञ** हूँ।\n\nमुझसे सांस संबंधी लक्षणों, दवाइयों, N95 मास्क, HEPA एयर प्यूरीफायर या सुरक्षित समय के बारे में कोई भी प्रश्न पूछें।`
+        : language === "ta"
+        ? `வணக்கம்! நான் உங்கள் **டெல்லி-என்சிஆர் சுவாச சுகாதார உதவியாளர்**.\n\nசுவாச பிரச்சனைகள், முகக்கவசங்கள், ஏர் ப்யூரிஃபையர் அமைப்புகள் அல்லது பாதுகாப்பான நேரங்கள் குறித்து எந்த கேள்வியையும் என்னிடம் கேட்கலாம்.`
+        : `Hello! I am your **Delhi NCR Health Care Assistant & Clinical Air Specialist**.\n\nAsk me any specific question about respiratory symptoms, medication management, N95 mask protection, HEPA purifier settings, or safe outdoor schedules. I will give you direct, evidence-based answers tailored to Delhi's air quality.`,
       modelUsed: "Qwen 3.8 27B Specialist",
       timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
     },
@@ -156,7 +160,7 @@ Ask me any specific question about respiratory symptoms, medication management, 
       generatedAt: forecast.data?.generated_at,
     };
 
-    const systemPrompt = buildHealthSystemPrompt(airContext);
+    const systemPrompt = buildHealthSystemPrompt(airContext, language);
 
     // Build chat history for Groq API
     const historyForApi: Array<{ role: "system" | "user" | "assistant"; content: string }> = [
@@ -276,7 +280,7 @@ Ask me any specific question about respiratory symptoms, medication management, 
             onClick={onBack}
           >
             <ArrowLeft size={15} />
-            <span>← Back to Live Overview</span>
+            <span>{t("common.backToOverview")}</span>
           </button>
 
           {/* Right Status Badge */}
@@ -336,7 +340,7 @@ Ask me any specific question about respiratory symptoms, medication management, 
                 lineHeight: 1.15,
               }}
             >
-              Health Care Assistant &amp; Clinical Air Specialist
+              {t("healthAssistant.title")}
             </h1>
             <p
               style={{
@@ -702,7 +706,7 @@ Ask me any specific question about respiratory symptoms, medication management, 
                       handleSendMessage();
                     }
                   }}
-                  placeholder="Ask a specific health, symptom, mask, or air question..."
+                  placeholder={t("healthAssistant.chatPlaceholder")}
                   style={{
                     width: "100%",
                     background: "transparent",
@@ -749,7 +753,7 @@ Ask me any specific question about respiratory symptoms, medication management, 
             >
               <Info size={13} style={{ flexShrink: 0, color: "var(--mist-dim)" }} />
               <span>
-                <strong>Clinical Notice:</strong> Educational medical AI. In case of acute shortness of breath or chest pain, immediately dial <strong>102/112</strong>.
+                {t("healthAssistant.aiDisclaimer")}
               </span>
             </div>
           </div>

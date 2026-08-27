@@ -3,6 +3,7 @@ import { CardStack, type CardStackItem } from "@/components/ui/card-stack";
 import { aqiColor, aqiToCategory, pollutantSubIndex } from "@/lib/aqi";
 import type { CityAggregateResponse, ConsensusResponse, HourlyForecast } from "@/lib/types";
 import { Sparkles, Wind, Layers, Activity, AlertTriangle } from "lucide-react";
+import { useTranslation } from "@/i18n";
 
 interface PollutantCardItem extends CardStackItem {
   species: string;
@@ -30,6 +31,7 @@ export function PollutantCardStackSection({
   hour,
   cursor = 0,
 }: PollutantCardStackSectionProps) {
+  const { t } = useTranslation();
   // Extract live metrics for all 6 CPCB pollutant species
   const items: PollutantCardItem[] = React.useMemo(() => {
     const isLive = cursor === 0;
@@ -231,16 +233,16 @@ export function PollutantCardStackSection({
           >
             <Sparkles size={13} className="text-[var(--live)]" />
             <span className="text-[11px] font-mono tracking-wider uppercase text-[var(--bone)]">
-              Interactive 3D Particle Spectrum
+              {t("cardstack.activeTelemetry")}
             </span>
           </div>
 
           <h2 className="text-2xl sm:text-4xl font-bold font-sans text-[var(--bone)] tracking-tight">
-            Live Pollutant Particle Breakdown
+            {t("cardstack.title")}
           </h2>
 
           <p className="mt-2.5 text-xs sm:text-sm text-[var(--mist)] max-w-2xl leading-relaxed">
-            Fanned 3D perspective across Delhi NCR&apos;s 6 critical criteria pollutants. Swipe or click cards to inspect real-time sensor concentrations, sub-indices, and primary emission vectors.
+            {t("cardstack.subtitle")}
           </p>
 
           <div className="mt-4 flex items-center gap-4 text-xs font-mono text-[var(--mist-dim)]">
@@ -256,7 +258,7 @@ export function PollutantCardStackSection({
             <span>•</span>
             <span className="inline-flex items-center gap-1.5">
               <Wind size={13} className="text-cyan-400" />
-              <span>Drag / Swipe Enabled</span>
+              <span>Interactive 3D Carousel</span>
             </span>
           </div>
         </div>
@@ -340,7 +342,7 @@ export function PollutantCardStackSection({
                         {item.title}
                       </div>
                       <div className="text-[10px] font-mono text-white/60">
-                        CPCB Std: {item.standard24h} {item.unit}
+                        {t("cardstack.safeLimit")}: {item.standard24h} {item.unit}
                       </div>
                     </div>
                   </div>
@@ -359,10 +361,7 @@ export function PollutantCardStackSection({
                       className="w-1.5 h-1.5 rounded-full animate-pulse"
                       style={{ backgroundColor: item.color }}
                     />
-                    <span>Idx {Math.round(item.subIndex)}</span>
-                    <span className="text-[9px] uppercase font-sans font-bold">
-                      ({item.category})
-                    </span>
+                    <span>{t("cardstack.subIndex")} {Math.round(item.subIndex)}</span>
                   </div>
                 </div>
 
@@ -393,7 +392,7 @@ export function PollutantCardStackSection({
                         }}
                       >
                         <AlertTriangle size={10} />
-                        {(item.concentration / item.standard24h).toFixed(1)}x Standard
+                        {(item.concentration / item.standard24h).toFixed(1)}{t("cardstack.ratioToStandard")}
                       </span>
                     )}
                   </div>
@@ -428,7 +427,7 @@ export function PollutantCardStackSection({
                       className="block font-mono text-[9px] uppercase font-semibold"
                       style={{ color: `${item.color}bb` }}
                     >
-                      Sources:
+                      {t("cardstack.primarySources")}:
                     </span>
                     <span className="text-white/85 line-clamp-1">
                       {item.sources}
@@ -439,7 +438,7 @@ export function PollutantCardStackSection({
                       className="block font-mono text-[9px] uppercase font-semibold"
                       style={{ color: `${item.color}bb` }}
                     >
-                      Health Effect:
+                      {t("cardstack.healthImpact")}:
                     </span>
                     <span className="text-white/85 line-clamp-1">
                       {item.healthEffect}

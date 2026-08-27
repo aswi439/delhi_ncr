@@ -95,7 +95,7 @@ export interface LiveAirQualityContext {
   generatedAt?: string | null;
 }
 
-export function buildHealthSystemPrompt(ctx?: LiveAirQualityContext): string {
+export function buildHealthSystemPrompt(ctx?: LiveAirQualityContext, lang: string = "en"): string {
   const aqiVal = ctx?.aqi ?? 345;
   const aqiCat = ctx?.category ?? "Very Poor";
   const pm25 = ctx?.pm25 ? `${Math.round(ctx.pm25)} µg/m³` : "185 µg/m³";
@@ -103,8 +103,16 @@ export function buildHealthSystemPrompt(ctx?: LiveAirQualityContext): string {
   const no2 = ctx?.no2 ? `${Math.round(ctx.no2)} µg/m³` : "48 µg/m³";
   const pbl = ctx?.pblHeightM ? `${Math.round(ctx.pblHeightM)}m` : "320m";
 
+  let langInstruction = "Respond in clear, natural English.";
+  if (lang === "hi") {
+    langInstruction = "IMPORTANT: Respond entirely in natural, citizen-friendly Hindi (हिन्दी) in Devanagari script. Keep pollutant abbreviations like PM2.5, PM10, AQI, N95 in standard alphanumeric format.";
+  } else if (lang === "ta") {
+    langInstruction = "IMPORTANT: Respond entirely in natural, citizen-friendly Tamil (தமிழ்) script. Keep pollutant abbreviations like PM2.5, PM10, AQI, N95 in standard alphanumeric format.";
+  }
+
   return `You are the Delhi NCR Health Care Assistant & Clinical Air Quality Specialist.
 Current Local Air Context: AQI ${aqiVal} (${aqiCat}), PM2.5: ${pm25}, PM10: ${pm10}, NO2: ${no2}, Mixing Depth: ${pbl}.
+LANGUAGE DIRECTIVE: ${langInstruction}
 
 CRITICAL INSTRUCTIONS:
 1. ONLY ANSWER WHAT THE USER ASKS. Be concise, direct, and practical.

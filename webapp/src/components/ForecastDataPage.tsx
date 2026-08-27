@@ -2,6 +2,7 @@ import { ArrowLeft, Sparkles } from "lucide-react";
 import { PollutantForecasts } from "@/components/PollutantForecasts";
 import { Footer } from "@/components/Footer";
 import type { Panel } from "@/hooks/useForecastData";
+import { useTranslation } from "@/i18n";
 import type {
   CityAggregateResponse,
   ConsensusResponse,
@@ -26,6 +27,7 @@ export function ForecastDataPage({
   cityAggregate,
   onBack,
 }: ForecastDataPageProps) {
+  const { t } = useTranslation();
   return (
     <div
       style={{
@@ -73,7 +75,7 @@ export function ForecastDataPage({
             onClick={onBack}
           >
             <ArrowLeft size={15} />
-            <span>← Back to Live Overview</span>
+            <span>{t("common.backToOverview")}</span>
           </button>
 
           <div style={{ display: "flex", alignItems: "center", gap: "0.8rem" }}>

@@ -19,6 +19,8 @@ import {
 } from "lucide-react";
 
 import type { Feeds } from "@/hooks/useForecastData";
+import { useTranslation } from "@/i18n";
+import { LanguageSelector } from "@/components/LanguageSelector";
 
 export type PageType =
   | "overview"
@@ -51,6 +53,7 @@ export function Rail({
   unreadAlertsCount = 0,
   hasCriticalAlert = false,
 }: RailProps) {
+  const { t } = useTranslation();
   const [menuOpen, setMenuOpen] = useState(false);
 
   const overviewNavItems = [
@@ -176,12 +179,12 @@ export function Rail({
               }}
             >
               {[
-                { id: "overview", label: "Overview", icon: Layers },
-                { id: "forecast-datas", label: "Forecast", icon: BarChart3 },
-                { id: "historic-data", label: "Historic", icon: History },
-                { id: "atmospheric-dynamics", label: "Atmosphere", icon: CloudRain },
-                { id: "exposure-tracker", label: "Exposure", icon: HeartPulse },
-                { id: "health-assistant", label: "Health Assistant", icon: Bot },
+                { id: "overview", label: t("navigation.overview"), icon: Layers },
+                { id: "forecast-datas", label: t("navigation.forecast"), icon: BarChart3 },
+                { id: "historic-data", label: t("navigation.historic"), icon: History },
+                { id: "atmospheric-dynamics", label: t("navigation.atmosphere"), icon: CloudRain },
+                { id: "exposure-tracker", label: t("navigation.exposure"), icon: HeartPulse },
+                { id: "health-assistant", label: t("navigation.healthAssistant"), icon: Bot },
               ].map((btn) => {
                 const isActive = currentPage === btn.id;
                 const Icon = btn.icon;
@@ -238,13 +241,13 @@ export function Rail({
           </div>
         )}
 
-        {/* Right: Alert Bell Quick Icon, Timestamp & Refresh */}
+        {/* Right: Alert Bell Quick Icon, Timestamp, Refresh & Language Selector */}
         <div
           style={{
             marginLeft: "auto",
             display: "flex",
             alignItems: "center",
-            gap: "0.85rem",
+            gap: "0.75rem",
             zIndex: 10,
           }}
         >
@@ -268,7 +271,7 @@ export function Rail({
                 transition: "all 0.2s cubic-bezier(0.16, 1, 0.3, 1)",
                 boxShadow: currentPage === "alerts" ? "0 0 12px rgba(168, 85, 247, 0.5)" : "none",
               }}
-              title="Environmental Alerts & Real-Time Advisories"
+              title={t("header.alertsTooltip")}
               aria-label="Real-time Alerts"
             >
               <Bell size={14} style={{ color: currentPage === "alerts" || unreadAlertsCount > 0 ? "#c084fc" : undefined }} />
@@ -320,7 +323,7 @@ export function Rail({
               display: "inline-flex",
               alignItems: "center",
               gap: "0.4rem",
-              padding: "0.35rem 0.7rem",
+              padding: "0.32rem 0.65rem",
               background: "transparent",
               border: "1px solid rgba(255, 255, 255, 0.25)",
               borderRadius: "4px",
@@ -334,8 +337,11 @@ export function Rail({
             }}
           >
             <RotateCw size={12} aria-hidden="true" />
-            <span>Refresh</span>
+            <span>{t("header.refresh")}</span>
           </button>
+
+          {/* Premium Language Selector (Top Right Box) */}
+          <LanguageSelector />
         </div>
       </header>
 
@@ -380,9 +386,9 @@ export function Rail({
               }}
             >
               <div>
-                <h3 style={{ margin: 0, fontSize: "1.1rem", color: "var(--bone)" }}>Navigation Index</h3>
+                <h3 style={{ margin: 0, fontSize: "1.1rem", color: "var(--bone)" }}>{t("navigation.index")}</h3>
                 <p style={{ margin: "0.2rem 0 0", fontSize: "12px", color: "var(--mist-faint)" }}>
-                  Navigate between pages and analytical modules
+                  {t("navigation.selectPage")}
                 </p>
               </div>
               <button
@@ -394,6 +400,23 @@ export function Rail({
               >
                 <X size={16} />
               </button>
+            </div>
+
+            {/* Language Selector Section for Mobile / Drawer */}
+            <div style={{ marginBottom: "1.4rem", paddingBottom: "1rem", borderBottom: "1px solid var(--hairline)" }}>
+              <div
+                style={{
+                  fontSize: "10.5px",
+                  fontFamily: "var(--mono)",
+                  color: "var(--mist-dim)",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.18em",
+                  marginBottom: "0.6rem",
+                }}
+              >
+                {t("header.language")} / Language
+              </div>
+              <LanguageSelector />
             </div>
 
             {/* Dedicated Pages Selector */}
@@ -408,7 +431,7 @@ export function Rail({
                   marginBottom: "0.75rem",
                 }}
               >
-                Select Page View
+                {t("navigation.selectPage")}
               </div>
 
               <div style={{ display: "flex", flexDirection: "column", gap: "0.55rem" }}>
@@ -432,15 +455,15 @@ export function Rail({
                     <Layers size={18} style={{ color: currentPage === "overview" ? "var(--live)" : "var(--mist)", marginTop: "2px" }} />
                     <div>
                       <div style={{ color: "var(--bone)", fontSize: "13px", fontWeight: 600, display: "flex", alignItems: "center", gap: "0.4rem" }}>
-                        <span>Overview &amp; Live Console</span>
+                        <span>{t("navigation.overview")}</span>
                         {currentPage === "overview" && (
                           <span style={{ fontSize: "10px", background: "var(--live)", color: "#000", padding: "1px 5px", borderRadius: "3px", fontWeight: 700 }}>
-                            ACTIVE
+                            {t("navigation.activeBadge")}
                           </span>
                         )}
                       </div>
                       <div style={{ color: "var(--mist-dim)", fontSize: "11.5px", marginTop: "2px" }}>
-                        Main coupled 72h forecast, CPCB particle cardstack, consensus &amp; maps
+                        {t("hero.networkAggregate")}
                       </div>
                     </div>
                   </div>
@@ -467,15 +490,15 @@ export function Rail({
                     <BarChart3 size={18} style={{ color: currentPage === "forecast-datas" ? "var(--live)" : "var(--mist)", marginTop: "2px" }} />
                     <div>
                       <div style={{ color: "var(--bone)", fontSize: "13px", fontWeight: 600, display: "flex", alignItems: "center", gap: "0.4rem" }}>
-                        <span>Forecast &amp; Model Dynamics</span>
+                        <span>{t("navigation.forecast")}</span>
                         {currentPage === "forecast-datas" && (
                           <span style={{ fontSize: "10px", background: "var(--live)", color: "#000", padding: "1px 5px", borderRadius: "3px", fontWeight: 700 }}>
-                            ACTIVE
+                            {t("navigation.activeBadge")}
                           </span>
                         )}
                       </div>
                       <div style={{ color: "var(--mist-dim)", fontSize: "11.5px", marginTop: "2px" }}>
-                        Deep multi-model forecast charts, confidence bands &amp; hourly trajectories
+                        {t("forecast.title")}
                       </div>
                     </div>
                   </div>
@@ -502,15 +525,15 @@ export function Rail({
                     <History size={18} style={{ color: currentPage === "historic-data" ? "var(--live)" : "var(--mist)", marginTop: "2px" }} />
                     <div>
                       <div style={{ color: "var(--bone)", fontSize: "13px", fontWeight: 600, display: "flex", alignItems: "center", gap: "0.4rem" }}>
-                        <span>Historic Trends &amp; Archives</span>
+                        <span>{t("navigation.historic")}</span>
                         {currentPage === "historic-data" && (
                           <span style={{ fontSize: "10px", background: "var(--live)", color: "#000", padding: "1px 5px", borderRadius: "3px", fontWeight: 700 }}>
-                            ACTIVE
+                            {t("navigation.activeBadge")}
                           </span>
                         )}
                       </div>
                       <div style={{ color: "var(--mist-dim)", fontSize: "11.5px", marginTop: "2px" }}>
-                        Retrospective historical records, multi-year comparisons &amp; seasonal baselines
+                        {t("historic.title")}
                       </div>
                     </div>
                   </div>
@@ -537,15 +560,15 @@ export function Rail({
                     <CloudRain size={18} style={{ color: currentPage === "atmospheric-dynamics" ? "var(--live)" : "var(--mist)", marginTop: "2px" }} />
                     <div>
                       <div style={{ color: "var(--bone)", fontSize: "13px", fontWeight: 600, display: "flex", alignItems: "center", gap: "0.4rem" }}>
-                        <span>Atmospheric Dynamics</span>
+                        <span>{t("navigation.atmosphere")}</span>
                         {currentPage === "atmospheric-dynamics" && (
                           <span style={{ fontSize: "10px", background: "var(--live)", color: "#000", padding: "1px 5px", borderRadius: "3px", fontWeight: 700 }}>
-                            ACTIVE
+                            {t("navigation.activeBadge")}
                           </span>
                         )}
                       </div>
                       <div style={{ color: "var(--mist-dim)", fontSize: "11.5px", marginTop: "2px" }}>
-                        Boundary layer inversion, ventilation coefficient, wind vectors &amp; humidity
+                        {t("atmosphere.title")}
                       </div>
                     </div>
                   </div>
@@ -572,15 +595,15 @@ export function Rail({
                     <HeartPulse size={18} style={{ color: currentPage === "exposure-tracker" ? "var(--live)" : "var(--mist)", marginTop: "2px" }} />
                     <div>
                       <div style={{ color: "var(--bone)", fontSize: "13px", fontWeight: 600, display: "flex", alignItems: "center", gap: "0.4rem" }}>
-                        <span>Health &amp; Exposure Tracker</span>
+                        <span>{t("navigation.exposure")}</span>
                         {currentPage === "exposure-tracker" && (
                           <span style={{ fontSize: "10px", background: "var(--live)", color: "#000", padding: "1px 5px", borderRadius: "3px", fontWeight: 700 }}>
-                            ACTIVE
+                            {t("navigation.activeBadge")}
                           </span>
                         )}
                       </div>
                       <div style={{ color: "var(--mist-dim)", fontSize: "11.5px", marginTop: "2px" }}>
-                        Dosage calculation, activity guidance &amp; vulnerable population warnings
+                        {t("exposure.title")}
                       </div>
                     </div>
                   </div>
@@ -607,15 +630,15 @@ export function Rail({
                     <Bot size={18} style={{ color: currentPage === "health-assistant" ? "var(--live)" : "var(--mist)", marginTop: "2px" }} />
                     <div>
                       <div style={{ color: "var(--bone)", fontSize: "13px", fontWeight: 600, display: "flex", alignItems: "center", gap: "0.4rem" }}>
-                        <span>Health Care Assistant</span>
+                        <span>{t("navigation.healthAssistant")}</span>
                         {currentPage === "health-assistant" && (
                           <span style={{ fontSize: "10px", background: "var(--live)", color: "#000", padding: "1px 5px", borderRadius: "3px", fontWeight: 700 }}>
-                            ACTIVE
+                            {t("navigation.activeBadge")}
                           </span>
                         )}
                       </div>
                       <div style={{ color: "var(--mist-dim)", fontSize: "11.5px", marginTop: "2px" }}>
-                        AI-powered real-time respiratory health advisory, mask recommendations &amp; clinical insights
+                        {t("healthAssistant.title")}
                       </div>
                     </div>
                   </div>
@@ -642,7 +665,7 @@ export function Rail({
                     <Bell size={18} style={{ color: currentPage === "alerts" ? "var(--live)" : unreadAlertsCount > 0 ? "#c084fc" : "var(--mist)", marginTop: "2px" }} />
                     <div>
                       <div style={{ color: "var(--bone)", fontSize: "13px", fontWeight: 600, display: "flex", alignItems: "center", gap: "0.4rem" }}>
-                        <span>Environmental Alerts &amp; Advisories</span>
+                        <span>{t("navigation.alerts")}</span>
                         {unreadAlertsCount > 0 && (
                           <span style={{ fontSize: "10px", background: hasCriticalAlert ? "#ef4444" : "#a855f7", color: "#FFFFFF", padding: "1px 5px", borderRadius: "3px", fontWeight: 700 }}>
                             {unreadAlertsCount} NEW
@@ -650,7 +673,7 @@ export function Rail({
                         )}
                       </div>
                       <div style={{ color: "var(--mist-dim)", fontSize: "11.5px", marginTop: "2px" }}>
-                        Real-time air quality warnings, rapid PM2.5 rise detections, fire smoke &amp; forecast spikes
+                        {t("alerts.title")}
                       </div>
                     </div>
                   </div>

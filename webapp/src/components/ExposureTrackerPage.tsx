@@ -1,6 +1,7 @@
 import { ArrowLeft, HeartPulse } from "lucide-react";
 import { ExposureTracker } from "@/components/ExposureTracker";
 import type { Panel } from "@/hooks/useForecastData";
+import { useTranslation } from "@/i18n";
 import type {
   CityAggregateResponse,
   ConsensusResponse,
@@ -25,6 +26,7 @@ export function ExposureTrackerPage({
   cityAggregate,
   onBack,
 }: ExposureTrackerPageProps) {
+  const { t } = useTranslation();
   const pm25 =
     cityAggregate?.sub_indices?.["PM2.5"]?.conc ??
     (consensus?.metrics?.pm25 ?? (hour?.sub_indices.find((s) => s.pollutant === "PM2.5")?.concentration ?? 95));
@@ -75,7 +77,7 @@ export function ExposureTrackerPage({
             onClick={onBack}
           >
             <ArrowLeft size={15} />
-            <span>← Back to Live Overview</span>
+            <span>{t("common.backToOverview")}</span>
           </button>
 
           <div style={{ display: "flex", alignItems: "center", gap: "0.8rem" }}>

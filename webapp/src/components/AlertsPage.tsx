@@ -39,6 +39,7 @@ import type { AlertLanguage } from "@/lib/alertTranslations";
 import { ALERT_TRANSLATIONS } from "@/lib/alertTranslations";
 import { AlertDetailModal } from "@/components/alerts/AlertDetailModal";
 import { AlertSettingsModal } from "@/components/alerts/AlertSettingsModal";
+import { useTranslation } from "@/i18n";
 
 interface AlertsPageProps {
   cityAggregate?: CityAggregateResponse | null;
@@ -63,7 +64,7 @@ export function AlertsPage({
   onBack,
   onNavigate,
 }: AlertsPageProps) {
-  const [language, setLanguage] = useState<AlertLanguage>("en");
+  const { language, setLanguage } = useTranslation();
   const [settings, setSettings] = useState<AlertSettings>(() => loadAlertSettings());
   const [showSettings, setShowSettings] = useState(false);
   const [selectedAlert, setSelectedAlert] = useState<AlertItem | null>(null);

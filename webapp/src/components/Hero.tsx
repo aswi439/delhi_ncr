@@ -23,6 +23,7 @@ import { POLLUTANTS } from "@/lib/types";
 import { Skeleton } from "@/components/ui/skeleton";
 import { FoldText } from "@/components/ui/FoldText";
 import type { PageType } from "@/components/Rail";
+import { useTranslation } from "@/i18n";
 
 export interface HeroVideoConfig {
   id: string;
@@ -113,6 +114,7 @@ export function Hero({
   currentPage: _currentPage = "overview",
   onPageChange: _onPageChange,
 }: HeroProps) {
+  const { t } = useTranslation();
   const videoRefs = useRef<(HTMLVideoElement | null)[]>([]);
 
   // Intro fold animation state with robust timer refs
@@ -274,10 +276,38 @@ export function Hero({
     ? (cityAggregate?.dominant_pollutant ?? (hour?.dominant_pollutant ?? maxSub.pollutant))
     : (hour?.dominant_pollutant ?? maxSub.pollutant);
 
+  const getLocalizedCategory = (cat: string) => {
+    const c = (cat || "").toLowerCase().replace(/\s+/g, "");
+    if (c === "good") return t("hero.categories.good");
+    if (c === "satisfactory") return t("hero.categories.satisfactory");
+    if (c === "moderate") return t("hero.categories.moderate");
+    if (c === "poor") return t("hero.categories.poor");
+    if (c === "verypoor") return t("hero.categories.veryPoor");
+    if (c === "severe" || c === "hazardous") return t("hero.categories.severe");
+    return cat;
+  };
+
+  const getLocalizedCategoryDesc = (aqi: number) => {
+    if (aqi <= 50) return t("hero.categoryDescriptions.good");
+    if (aqi <= 100) return t("hero.categoryDescriptions.satisfactory");
+    if (aqi <= 200) return t("hero.categoryDescriptions.moderate");
+    if (aqi <= 300) return t("hero.categoryDescriptions.poor");
+    if (aqi <= 400) return t("hero.categoryDescriptions.veryPoor");
+    return t("hero.categoryDescriptions.severe");
+  };
+
+  const getThemeLabel = (id: string, def: string) => {
+    if (id === "golden-hour") return t("hero.themeGoldenHour");
+    if (id === "still-water") return t("hero.themeStillWater");
+    if (id === "deep-woods") return t("hero.themeDeepWoods");
+    if (id === "quiet-dawn") return t("hero.themeQuietDawn");
+    return def;
+  };
+
   const activeColor = cityAggregate?.color && isLiveNow ? cityAggregate.color : aqiColor(displayAqi);
   const locationLabel = isLiveNow
-    ? (cityAggregate?.location_label ?? "DELHI NCR · 43-STATION NETWORK AGGREGATE")
-    : `DELHI NCR (+${cursor}h FORECAST)`;
+    ? (cityAggregate?.location_label ?? `DELHI NCR · ${t("hero.networkAggregate")}`)
+    : `DELHI NCR (+${cursor}h ${t("navigation.forecast")})`;
 
   return (
     <div
@@ -545,7 +575,7 @@ export function Hero({
                   }}
                 >
                   <Sparkles size={13} />
-                  <span>{displayCategory}</span>
+                  <span>{getLocalizedCategory(displayCategory)}</span>
                 </div>
               </div>
 
@@ -565,21 +595,21 @@ export function Hero({
               >
                 <span style={{ display: "inline-flex", alignItems: "center", gap: "0.3rem" }}>
                   <Wind size={12} style={{ color: activeColor }} />
-                  <span>Dominant: <strong style={{ color: "#FFFFFF" }}>{dominantPollutant}</strong></span>
+                  <span>{t("hero.dominant")}: <strong style={{ color: "#FFFFFF" }}>{dominantPollutant}</strong></span>
                 </span>
 
                 <span style={{ opacity: 0.35 }}>•</span>
 
                 <span style={{ display: "inline-flex", alignItems: "center", gap: "0.3rem" }}>
                   <Clock size={12} style={{ color: "rgba(255, 255, 255, 0.65)" }} />
-                  <span>Valid: <strong style={{ color: "#FFFFFF" }}>{hour ? dayClock(hour.timestamp) : "Nowcast"}</strong></span>
+                  <span>{t("hero.valid")}: <strong style={{ color: "#FFFFFF" }}>{hour ? dayClock(hour.timestamp) : "Nowcast"}</strong></span>
                 </span>
 
                 <span style={{ opacity: 0.35 }}>•</span>
 
                 <span style={{ display: "inline-flex", alignItems: "center", gap: "0.3rem" }}>
                   <ShieldCheck size={12} style={{ color: "var(--live)" }} />
-                  <span>{isLiveNow ? `${cityAggregate?.station_count ?? 43} Stations` : `${leadLabel(cursor)} (T+${cursor}h)`}</span>
+                  <span>{isLiveNow ? `${cityAggregate?.station_count ?? 43} ${t("hero.stations")}` : `${leadLabel(cursor)} (T+${cursor}h)`}</span>
                 </span>
               </div>
 
@@ -598,7 +628,7 @@ export function Hero({
                   <div style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
                     <Activity size={12} style={{ color: activeColor }} />
                     <span style={{ fontSize: "10.5px", fontFamily: "var(--mono)", letterSpacing: "0.08em", textTransform: "uppercase", color: "rgba(255, 255, 255, 0.75)", fontWeight: 600, textShadow: "0 1px 4px rgba(0,0,0,0.6)" }}>
-                      CPCB AQI Scale Spectrum
+                      {t("hero.spectrumTitle")}
                     </span>
                   </div>
                   <span
@@ -610,7 +640,7 @@ export function Hero({
                       textShadow: `0 0 8px ${activeColor}, 0 1px 4px rgba(0,0,0,0.7)`,
                     }}
                   >
-                    Pointer @ {int(displayAqi)}
+                    {t("hero.pointerAt")} {int(displayAqi)}
                   </span>
                 </div>
 
@@ -781,19 +811,7 @@ export function Hero({
                   }}
                 >
                   <AlertCircle size={13} style={{ color: activeColor, flexShrink: 0, marginTop: "1px" }} />
-                  <span>
-                    {displayAqi <= 50
-                      ? "Good — Ideal air quality for all outdoor activities and exercise."
-                      : displayAqi <= 100
-                      ? "Moderate — Minor breathing discomfort to sensitive individuals with respiratory ailments."
-                      : displayAqi <= 200
-                      ? "Poor — Breathing discomfort to people with asthma, lung, and heart disease."
-                      : displayAqi <= 300
-                      ? "Unhealthy — Breathing discomfort to most people on prolonged outdoor exposure."
-                      : displayAqi <= 400
-                      ? "Severe — High risk of respiratory illness on prolonged exposure. Avoid outdoor activities."
-                      : "Hazardous — Emergency health conditions. Severe pulmonary and cardiovascular impact across entire population."}
-                  </span>
+                  <span>{getLocalizedCategoryDesc(displayAqi)}</span>
                 </div>
               </div>
             </div>
@@ -875,13 +893,13 @@ export function Hero({
                   }}
                 >
                   <Video
-                    size={12.5}
+                    size={13}
                     style={{
-                      color: isActive ? "var(--live)" : "rgba(255, 255, 255, 0.55)",
+                      color: isActive ? "var(--live)" : "rgba(255, 255, 255, 0.6)",
                       transition: "color 0.25s ease",
                     }}
                   />
-                  <span>{v.label}</span>
+                  <span>{getThemeLabel(v.id, v.label)}</span>
                 </button>
               );
             })}
