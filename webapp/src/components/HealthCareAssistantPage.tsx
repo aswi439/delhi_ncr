@@ -6,11 +6,16 @@ import {
   Copy,
   Info,
   KeyRound,
+  Mic,
+  MicOff,
   RefreshCw,
   Send,
   ShieldAlert,
   Sparkles,
+  Square,
   User,
+  Volume2,
+  VolumeX,
   X,
   Zap,
   Activity,
@@ -67,6 +72,180 @@ export function HealthCareAssistantPage({
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [statusMessage, setStatusMessage] = useState<string>("");
   const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  // Voice TTS & STT State
+  const [isAutoSpeak, setIsAutoSpeak] = useState<boolean>(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("delhi_aqi_auto_speak") === "true";
+    }
+    return true; // Default enabled as requested
+  });
+  const [speakingMsgId, setSpeakingMsgId] = useState<string | null>(null);
+  const [isListening, setIsListening] = useState<boolean>(false);
+  const recognitionRef = useRef<any>(null);
+
+  // Voice Helper Functions
+  const cleanMarkdownForSpeech = (text: string): string => {
+    return text
+      .replace(/```[\s\S]*?```/g, "")
+      .replace(/`([^`]+)`/g, "$1")
+      .replace(/^#+\s+/gm, "")
+      .replace(/[*_]{1,3}([^*_]+)[*_]{1,3}/g, "$1")
+      .replace(/\$\$[\s\S]*?\$\$/g, "")
+      .replace(/\$([^\$]+)\$/g, "$1")
+      .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
+      .replace(/^[\*\-•]\s+/gm, "")
+      .replace(/^\d+\.\s+/gm, "")
+      .replace(/[🟢🟡🟠🔴🟣🟤🚨🔬🌫️📊🌡️🌙🏢🛡️🌀🏏🍵🩺💡🌐⏰📅👋🧮😄⚠️]/gu, "")
+      .replace(/\n+/g, ". ")
+      .replace(/\s{2,}/g, " ")
+      .trim();
+  };
+
+  const speakText = (text: string, msgId?: string) => {
+    if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
+
+    window.speechSynthesis.cancel();
+
+    if (speakingMsgId && speakingMsgId === msgId) {
+      setSpeakingMsgId(null);
+      return;
+    }
+
+    const cleanText = cleanMarkdownForSpeech(text);
+    if (!cleanText) return;
+
+    const utterance = new SpeechSynthesisUtterance(cleanText);
+    utterance.lang = "en-US";
+    utterance.rate = 1.0;
+    utterance.pitch = 1.0;
+
+    const voices = window.speechSynthesis.getVoices();
+    const naturalVoice =
+      voices.find(
+        (v) =>
+          v.lang.startsWith("en") &&
+          (v.name.includes("Natural") ||
+            v.name.includes("Google") ||
+            v.name.includes("Samantha") ||
+            v.name.includes("Jenny") ||
+            v.name.includes("Microsoft") ||
+            v.name.includes("Karen") ||
+            v.name.includes("Zira"))
+      ) || voices.find((v) => v.lang.startsWith("en"));
+
+    if (naturalVoice) {
+      utterance.voice = naturalVoice;
+    }
+
+    utterance.onstart = () => {
+      if (msgId) setSpeakingMsgId(msgId);
+    };
+    utterance.onend = () => {
+      setSpeakingMsgId(null);
+    };
+    utterance.onerror = () => {
+      setSpeakingMsgId(null);
+    };
+
+    window.speechSynthesis.speak(utterance);
+  };
+
+  const stopSpeaking = () => {
+    if (typeof window !== "undefined" && "speechSynthesis" in window) {
+      window.speechSynthesis.cancel();
+      setSpeakingMsgId(null);
+    }
+  };
+
+  const handleToggleAutoSpeak = () => {
+    setIsAutoSpeak((prev) => {
+      const next = !prev;
+      if (typeof window !== "undefined") {
+        localStorage.setItem("delhi_aqi_auto_speak", String(next));
+      }
+      if (!next) {
+        stopSpeaking();
+      }
+      return next;
+    });
+  };
+
+  const toggleListening = () => {
+    if (typeof window === "undefined") return;
+
+    const SpeechRecognition =
+      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+
+    if (!SpeechRecognition) {
+      alert("Voice transcription is not supported in this browser. Please use Chrome, Edge, or Safari.");
+      return;
+    }
+
+    if (isListening) {
+      if (recognitionRef.current) {
+        try {
+          recognitionRef.current.stop();
+        } catch {
+          // ignore
+        }
+      }
+      setIsListening(false);
+      return;
+    }
+
+    try {
+      const recognition = new SpeechRecognition();
+      recognitionRef.current = recognition;
+      recognition.continuous = false;
+      recognition.interimResults = true;
+      recognition.lang = language === "hi" ? "hi-IN" : language === "ta" ? "ta-IN" : "en-IN";
+
+      recognition.onstart = () => {
+        setIsListening(true);
+      };
+
+      recognition.onresult = (event: any) => {
+        let transcript = "";
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          transcript += event.results[i][0].transcript;
+        }
+        if (transcript) {
+          setInputMessage(transcript);
+        }
+      };
+
+      recognition.onerror = (event: any) => {
+        console.warn("[Voice Transcription] Error:", event.error);
+        setIsListening(false);
+      };
+
+      recognition.onend = () => {
+        setIsListening(false);
+      };
+
+      recognition.start();
+    } catch (err) {
+      console.error("[Voice Transcription] Failed to start:", err);
+      setIsListening(false);
+    }
+  };
+
+  // Cleanup speech synthesis on unmount
+  useEffect(() => {
+    return () => {
+      if (typeof window !== "undefined" && "speechSynthesis" in window) {
+        window.speechSynthesis.cancel();
+      }
+      if (recognitionRef.current) {
+        try {
+          recognitionRef.current.stop();
+        } catch {
+          // ignore
+        }
+      }
+    };
+  }, []);
 
   // Live atmospheric telemetry extraction
   const liveAqi = cityAggregate?.overall_aqi ?? (consensus?.metrics?.aqi ?? (hour?.aqi ?? 342));
@@ -245,6 +424,10 @@ export function HealthCareAssistantPage({
       };
 
       setMessages((prev) => [...prev, assistantMsg]);
+
+      if (isAutoSpeak && result.content) {
+        speakText(result.content, assistantMsg.id);
+      }
     } catch (err: unknown) {
       const errMsg = err instanceof Error ? err.message : String(err);
       const errorMsg: ChatMessage = {
@@ -269,6 +452,7 @@ export function HealthCareAssistantPage({
 
   const handleClearChat = () => {
     if (confirm("Clear current conversation history?")) {
+      stopSpeaking();
       setMessages([
         {
           id: "welcome-reset",
@@ -348,6 +532,34 @@ export function HealthCareAssistantPage({
 
           {/* Right Status Badges & Key Config */}
           <div style={{ display: "flex", alignItems: "center", gap: "0.8rem", flexWrap: "wrap" }}>
+            {/* Auto-Read Voice Toggle */}
+            <button
+              type="button"
+              onClick={handleToggleAutoSpeak}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "0.4rem",
+                padding: "5px 10px",
+                background: isAutoSpeak ? "rgba(56, 189, 248, 0.15)" : "rgba(255, 255, 255, 0.05)",
+                border: `1px solid ${isAutoSpeak ? "rgba(56, 189, 248, 0.4)" : "rgba(255, 255, 255, 0.12)"}`,
+                borderRadius: "4px",
+                fontFamily: "var(--mono)",
+                fontSize: "11px",
+                color: isAutoSpeak ? "var(--cyan)" : "var(--mist)",
+                cursor: "pointer",
+                transition: "all 0.15s ease",
+              }}
+              title="Toggle reading replies aloud in English"
+            >
+              {isAutoSpeak ? (
+                <Volume2 size={13} style={{ color: "var(--cyan)" }} />
+              ) : (
+                <VolumeX size={13} />
+              )}
+              <span>{isAutoSpeak ? "Read Aloud: ON" : "Read Aloud: OFF"}</span>
+            </button>
+
             <button
               type="button"
               onClick={() => {
@@ -662,6 +874,28 @@ export function HealthCareAssistantPage({
 
                         <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
                           <span style={{ fontSize: "10.5px", color: "var(--mist-dim)", fontFamily: "var(--mono)" }}>{msg.timestamp}</span>
+                          {!isUser && (
+                            <button
+                              type="button"
+                              onClick={() => speakText(msg.content, msg.id)}
+                              style={{
+                                background: "none",
+                                border: "none",
+                                color: speakingMsgId === msg.id ? "var(--cyan)" : "var(--mist-dim)",
+                                cursor: "pointer",
+                                padding: "2px",
+                                display: "flex",
+                                alignItems: "center",
+                              }}
+                              title={speakingMsgId === msg.id ? "Stop reading" : "Read message aloud (English)"}
+                            >
+                              {speakingMsgId === msg.id ? (
+                                <Square size={13} style={{ fill: "var(--cyan)", color: "var(--cyan)" }} />
+                              ) : (
+                                <Volume2 size={13} />
+                              )}
+                            </button>
+                          )}
                           <button
                             type="button"
                             onClick={() => copyToClipboard(msg.content, msg.id)}
@@ -817,6 +1051,34 @@ export function HealthCareAssistantPage({
                   }}
                   disabled={isLoading}
                 />
+
+                {/* Voice Transcription Microphone Button */}
+                <button
+                  type="button"
+                  onClick={toggleListening}
+                  style={{
+                    background: isListening ? "rgba(239, 68, 68, 0.25)" : "transparent",
+                    color: isListening ? "#ef4444" : "var(--mist)",
+                    border: isListening ? "1px solid rgba(239, 68, 68, 0.5)" : "none",
+                    borderRadius: "6px",
+                    padding: "0.5rem",
+                    marginRight: "0.4rem",
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    transition: "all 0.2s ease",
+                    boxShadow: isListening ? "0 0 12px rgba(239, 68, 68, 0.5)" : "none",
+                  }}
+                  title={isListening ? "Listening... Click to stop" : "Voice input / Speech-to-text"}
+                >
+                  {isListening ? (
+                    <MicOff size={16} style={{ color: "#ef4444" }} className="pulse" />
+                  ) : (
+                    <Mic size={16} />
+                  )}
+                </button>
+
                 <button
                   type="button"
                   onClick={() => handleSendMessage()}
