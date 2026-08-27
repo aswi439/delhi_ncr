@@ -113,8 +113,9 @@ function AutoResize() {
  * ---------------------------------------
  * Features:
  * 1. Progressive Radial Ingress Sweep: On layer/tier change, nodes bloom smoothly from Central Delhi outward.
- * 2. Zoom-Adaptive Density (LOD): Small elegant micro-dots at low zoom preventing clumsy blob overlap; expands to interactive precision nodes when zooming in.
- * 3. Anchor Highlights: Luminous glowing halos for major Power & WTE plants.
+ * 2. Animated Zoom Scatter & Bloom: As user zooms in, factories smoothly fan out and scatter from their cluster centroids to their exact pinpoint GPS coordinates.
+ * 3. Zoom-Adaptive Density (LOD): Small elegant micro-dots at low zoom preventing clumsy blob overlap.
+ * 4. Text-wrapping & Glassmorphism Tooltip Fix: Prevents text clipping and guarantees clean responsive word breaks.
  */
 function IndustryMarkersLayer({
   industries,
@@ -126,19 +127,50 @@ function IndustryMarkersLayer({
   const map = useMap();
   const [zoom, setZoom] = useState(() => map.getZoom());
   const [progress, setProgress] = useState(0);
-
-  // Track map zoom changes smoothly
-  useMapEvents({
-    zoomend: () => setZoom(map.getZoom()),
+  const [dispersion, setDispersion] = useState(() => {
+    const z = map.getZoom();
+    return z <= 10 ? 0.35 : z === 11 ? 0.65 : z === 12 ? 0.85 : 1.0;
   });
 
-  // Calculate distance from central Delhi (28.6139, 77.2090)
+  // Smoothly animate dispersion when zooming
+  useMapEvents({
+    zoomstart: () => {
+      // Begin spring transition
+    },
+    zoomend: () => {
+      const newZoom = map.getZoom();
+      setZoom(newZoom);
+      const targetDispersion = newZoom <= 10 ? 0.35 : newZoom === 11 ? 0.65 : newZoom === 12 ? 0.85 : 1.0;
+      
+      let start: number | null = null;
+      const duration = 400; // 400ms smooth scatter animation
+      const startDisp = dispersion;
+
+      const animateScatter = (timestamp: number) => {
+        if (!start) start = timestamp;
+        const elapsed = timestamp - start;
+        const p = Math.min(1, elapsed / duration);
+        // Ease-out cubic
+        const eased = 1 - Math.pow(1 - p, 3);
+        setDispersion(startDisp + (targetDispersion - startDisp) * eased);
+        if (p < 1) {
+          requestAnimationFrame(animateScatter);
+        }
+      };
+      requestAnimationFrame(animateScatter);
+    },
+  });
+
+  // Calculate distance from central Delhi (28.6139, 77.2090) and local zone grid centroids
   const sortedWithDist = useMemo(() => {
     const centerLat = 28.6139;
     const centerLon = 77.2090;
     const list = industries.map((ind) => {
       const d = Math.hypot(ind.latitude - centerLat, ind.longitude - centerLon);
-      return { ind, dist: d };
+      // Compute localized cluster grid center (~1.5 km grid cell)
+      const gridLat = Math.round(ind.latitude / 0.016) * 0.016;
+      const gridLon = Math.round(ind.longitude / 0.016) * 0.016;
+      return { ind, dist: d, gridLat, gridLon };
     });
     // Sort by radial distance from center
     list.sort((a, b) => a.dist - b.dist);
@@ -180,10 +212,7 @@ function IndustryMarkersLayer({
 
   if (!active || industries.length === 0) return null;
 
-  // Zoom-adaptive density scaling (LOD):
-  // Zoom <= 10: delicate micro-dots (radius ~1.8-2.5px, opacity 0.65) so the city doesn't clump
-  // Zoom 11-12: medium dots (radius ~3.0-4.2px)
-  // Zoom >= 13: full precision interactive nodes (radius ~4.5-6.0px)
+  // Zoom-adaptive density scaling (LOD)
   const isZoomedOut = zoom <= 10;
   const isMidZoom = zoom > 10 && zoom <= 12;
 
@@ -195,7 +224,7 @@ function IndustryMarkersLayer({
   const baseOpacity = isZoomedOut ? 0.65 : isMidZoom ? 0.85 : 0.95;
   const strokeW = isZoomedOut ? 0.5 : 1;
 
-  // Reveal items within the current radial threshold
+  // Reveal items within current radial threshold
   const visibleThreshold = sortedWithDist.maxDist * Math.max(0.06, progress);
   const visibleItems = sortedWithDist.list.filter(
     (item) => item.dist <= visibleThreshold || item.dist <= 0.035,
@@ -203,7 +232,7 @@ function IndustryMarkersLayer({
 
   return (
     <>
-      {visibleItems.map(({ ind }, i) => {
+      {visibleItems.map(({ ind, gridLat, gridLon }, i) => {
         const tierInfo = classifyIndustryTier(ind);
         const isAnchor =
           tierInfo.tier === 1 &&
@@ -228,12 +257,16 @@ function IndustryMarkersLayer({
               ? "#7c2d12"
               : "#581c87";
 
+        // Calculated animated position (fans out / scatters to exact coordinates as zoom increases)
+        const curLat = gridLat + (ind.latitude - gridLat) * dispersion;
+        const curLon = gridLon + (ind.longitude - gridLon) * dispersion;
+
         return (
           <Fragment key={ind.id ? `ind-${ind.id}` : `ind-${i}`}>
             {/* Soft ambient glow halo for Anchor Power & WTE plants */}
             {isAnchor && (
               <CircleMarker
-                center={[ind.latitude, ind.longitude]}
+                center={[curLat, curLon]}
                 radius={r * 1.7}
                 pane="ncrGlow"
                 interactive={false}
@@ -246,7 +279,7 @@ function IndustryMarkersLayer({
             )}
 
             <CircleMarker
-              center={[ind.latitude, ind.longitude]}
+              center={[curLat, curLon]}
               radius={r}
               pane="ncrIndustries"
               pathOptions={{
@@ -256,18 +289,23 @@ function IndustryMarkersLayer({
                 fillOpacity: isAnchor ? 1 : baseOpacity,
               }}
             >
-              <Tooltip direction="top" offset={[0, -6]}>
+              <Tooltip direction="top" offset={[0, -6]} className="map__industryTooltip">
                 <div
                   style={{
-                    padding: "6px 9px",
+                    padding: "8px 10px",
                     fontSize: "11px",
                     lineHeight: "1.45",
-                    maxWidth: "240px",
-                    background: "rgba(15, 23, 42, 0.95)",
-                    borderRadius: "6px",
-                    border: `1px solid ${tierInfo.color}66`,
-                    boxShadow: "0 8px 24px rgba(0,0,0,0.5)",
-                    backdropFilter: "blur(6px)",
+                    width: "250px",
+                    maxWidth: "260px",
+                    boxSizing: "border-box",
+                    wordBreak: "break-word",
+                    overflowWrap: "anywhere",
+                    whiteSpace: "normal",
+                    background: "rgba(15, 23, 42, 0.96)",
+                    borderRadius: "7px",
+                    border: `1px solid ${tierInfo.color}80`,
+                    boxShadow: "0 8px 26px rgba(0,0,0,0.6)",
+                    backdropFilter: "blur(8px)",
                   }}
                 >
                   <div
@@ -275,7 +313,7 @@ function IndustryMarkersLayer({
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "space-between",
-                      marginBottom: "4px",
+                      marginBottom: "5px",
                     }}
                   >
                     <span
@@ -283,7 +321,7 @@ function IndustryMarkersLayer({
                         fontSize: "9.5px",
                         fontWeight: 700,
                         letterSpacing: "0.05em",
-                        padding: "2px 5px",
+                        padding: "2px 6px",
                         borderRadius: "4px",
                         background: `${tierInfo.color}25`,
                         color: tierInfo.color,
@@ -297,17 +335,29 @@ function IndustryMarkersLayer({
                   <strong
                     style={{
                       color: "#f8fafc",
-                      fontSize: "12px",
+                      fontSize: "11.5px",
+                      lineHeight: "1.35",
                       display: "block",
-                      marginBottom: "2px",
+                      marginBottom: "4px",
+                      wordBreak: "break-word",
+                      overflowWrap: "anywhere",
+                      whiteSpace: "normal",
                     }}
                   >
                     {isAnchor ? "⚡ " : "🏭 "}
                     {ind.name}
                   </strong>
 
-                  <div style={{ color: "#cbd5e1", fontSize: "11px", marginBottom: "4px" }}>
-                    <strong>Sector:</strong> {ind.sector || ind.category || "Industrial Source"}
+                  <div
+                    style={{
+                      color: "#cbd5e1",
+                      fontSize: "11px",
+                      marginBottom: "4px",
+                      wordBreak: "break-word",
+                      overflowWrap: "anywhere",
+                    }}
+                  >
+                    <strong style={{ color: "#94a3b8" }}>Sector:</strong> {ind.sector || ind.category || "Industrial Source"}
                   </div>
 
                   <div
@@ -315,15 +365,24 @@ function IndustryMarkersLayer({
                       fontSize: "10px",
                       color: "#fca5a5",
                       marginBottom: "4px",
-                      background: "rgba(0,0,0,0.3)",
-                      padding: "2px 4px",
+                      background: "rgba(0,0,0,0.35)",
+                      padding: "3px 5px",
                       borderRadius: "3px",
+                      wordBreak: "break-word",
+                      overflowWrap: "anywhere",
                     }}
                   >
-                    <strong>Key Pollutants:</strong> {tierInfo.pollutants}
+                    <strong style={{ color: "#f87171" }}>Key Pollutants:</strong> {tierInfo.pollutants}
                   </div>
 
-                  <div style={{ color: "#38bdf8", fontSize: "10px" }}>
+                  <div
+                    style={{
+                      color: "#38bdf8",
+                      fontSize: "10px",
+                      wordBreak: "break-word",
+                      overflowWrap: "anywhere",
+                    }}
+                  >
                     📍 {ind.city}, {ind.state} {ind.address ? `• ${ind.address.split(",")[0]}` : ""}
                   </div>
                 </div>

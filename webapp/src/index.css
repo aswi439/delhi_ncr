@@ -102,3 +102,31 @@
   font-family: 'Instrument Serif', Georgia, serif;
 }
 
+/* Leaflet Tooltip Text Overflow Fix & Premium Glassmorphism */
+.leaflet-tooltip.map__industryTooltip,
+.leaflet-tooltip {
+  white-space: normal !important;
+  word-break: break-word !important;
+  overflow-wrap: break-word !important;
+  max-width: 300px !important;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+}
+
+.leaflet-tooltip-top:before,
+.leaflet-tooltip-bottom:before,
+.leaflet-tooltip-left:before,
+.leaflet-tooltip-right:before {
+  border: none !important;
+}
+
+/* Premium Zoom Scatter & Bloom Transition for Industry Points */
+.leaflet-pane.leaflet-ncrIndustries-pane svg path {
+  transition: r 0.35s cubic-bezier(0.34, 1.56, 0.64, 1),
+              fill-opacity 0.3s ease,
+              stroke-width 0.3s ease;
+  transform-origin: center;
+}
+
