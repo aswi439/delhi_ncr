@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useMemo } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import {
   Circle,
   CircleMarker,
@@ -108,6 +108,234 @@ function AutoResize() {
   return null;
 }
 
+/**
+ * High-performance Industry Markers Layer
+ * ---------------------------------------
+ * Features:
+ * 1. Progressive Radial Ingress Sweep: On layer/tier change, nodes bloom smoothly from Central Delhi outward.
+ * 2. Zoom-Adaptive Density (LOD): Small elegant micro-dots at low zoom preventing clumsy blob overlap; expands to interactive precision nodes when zooming in.
+ * 3. Anchor Highlights: Luminous glowing halos for major Power & WTE plants.
+ */
+function IndustryMarkersLayer({
+  industries,
+  active,
+}: {
+  industries: IndustryRecord[];
+  active: boolean;
+}) {
+  const map = useMap();
+  const [zoom, setZoom] = useState(() => map.getZoom());
+  const [progress, setProgress] = useState(0);
+
+  // Track map zoom changes smoothly
+  useMapEvents({
+    zoomend: () => setZoom(map.getZoom()),
+  });
+
+  // Calculate distance from central Delhi (28.6139, 77.2090)
+  const sortedWithDist = useMemo(() => {
+    const centerLat = 28.6139;
+    const centerLon = 77.2090;
+    const list = industries.map((ind) => {
+      const d = Math.hypot(ind.latitude - centerLat, ind.longitude - centerLon);
+      return { ind, dist: d };
+    });
+    // Sort by radial distance from center
+    list.sort((a, b) => a.dist - b.dist);
+    const maxDist = list.length > 0 ? list[list.length - 1].dist : 1;
+    return { list, maxDist: Math.max(0.01, maxDist) };
+  }, [industries]);
+
+  // Progressive radial sweep animation on mount or when tier/data changes
+  useEffect(() => {
+    if (!active || industries.length === 0) {
+      setProgress(0);
+      return;
+    }
+
+    let start: number | null = null;
+    const duration = 500; // 500ms progressive radial sweep
+    let rafId: number;
+
+    const step = (timestamp: number) => {
+      if (!start) start = timestamp;
+      const elapsed = timestamp - start;
+      const p = Math.min(1, elapsed / duration);
+      // Ease-out cubic curve
+      const eased = 1 - Math.pow(1 - p, 3);
+      setProgress(eased);
+
+      if (p < 1) {
+        rafId = requestAnimationFrame(step);
+      }
+    };
+
+    setProgress(0.05);
+    rafId = requestAnimationFrame(step);
+
+    return () => {
+      if (rafId) cancelAnimationFrame(rafId);
+    };
+  }, [active, industries]);
+
+  if (!active || industries.length === 0) return null;
+
+  // Zoom-adaptive density scaling (LOD):
+  // Zoom <= 10: delicate micro-dots (radius ~1.8-2.5px, opacity 0.65) so the city doesn't clump
+  // Zoom 11-12: medium dots (radius ~3.0-4.2px)
+  // Zoom >= 13: full precision interactive nodes (radius ~4.5-6.0px)
+  const isZoomedOut = zoom <= 10;
+  const isMidZoom = zoom > 10 && zoom <= 12;
+
+  const baseRadiusTier1 = isZoomedOut ? 2.4 : isMidZoom ? 4.0 : 5.6;
+  const baseRadiusTier2 = isZoomedOut ? 1.9 : isMidZoom ? 3.2 : 4.6;
+  const baseRadiusTier3 = isZoomedOut ? 1.5 : isMidZoom ? 2.4 : 3.8;
+  const anchorRadius = isZoomedOut ? 5.2 : isMidZoom ? 7.2 : 9.0;
+
+  const baseOpacity = isZoomedOut ? 0.65 : isMidZoom ? 0.85 : 0.95;
+  const strokeW = isZoomedOut ? 0.5 : 1;
+
+  // Reveal items within the current radial threshold
+  const visibleThreshold = sortedWithDist.maxDist * Math.max(0.06, progress);
+  const visibleItems = sortedWithDist.list.filter(
+    (item) => item.dist <= visibleThreshold || item.dist <= 0.035,
+  );
+
+  return (
+    <>
+      {visibleItems.map(({ ind }, i) => {
+        const tierInfo = classifyIndustryTier(ind);
+        const isAnchor =
+          tierInfo.tier === 1 &&
+          (ind.category === "power" ||
+            ind.name.toLowerCase().includes("power") ||
+            ind.name.toLowerCase().includes("waste to energy") ||
+            ind.name.toLowerCase().includes("wte"));
+
+        const r = isAnchor
+          ? anchorRadius
+          : tierInfo.tier === 1
+            ? baseRadiusTier1
+            : tierInfo.tier === 2
+              ? baseRadiusTier2
+              : baseRadiusTier3;
+
+        const strokeColor = isAnchor
+          ? "#ffffff"
+          : tierInfo.tier === 1
+            ? "#7f1d1d"
+            : tierInfo.tier === 2
+              ? "#7c2d12"
+              : "#581c87";
+
+        return (
+          <Fragment key={ind.id ? `ind-${ind.id}` : `ind-${i}`}>
+            {/* Soft ambient glow halo for Anchor Power & WTE plants */}
+            {isAnchor && (
+              <CircleMarker
+                center={[ind.latitude, ind.longitude]}
+                radius={r * 1.7}
+                pane="ncrGlow"
+                interactive={false}
+                pathOptions={{
+                  stroke: false,
+                  fillColor: tierInfo.color,
+                  fillOpacity: 0.25,
+                }}
+              />
+            )}
+
+            <CircleMarker
+              center={[ind.latitude, ind.longitude]}
+              radius={r}
+              pane="ncrIndustries"
+              pathOptions={{
+                color: strokeColor,
+                weight: isAnchor ? 2 : strokeW,
+                fillColor: tierInfo.color,
+                fillOpacity: isAnchor ? 1 : baseOpacity,
+              }}
+            >
+              <Tooltip direction="top" offset={[0, -6]}>
+                <div
+                  style={{
+                    padding: "6px 9px",
+                    fontSize: "11px",
+                    lineHeight: "1.45",
+                    maxWidth: "240px",
+                    background: "rgba(15, 23, 42, 0.95)",
+                    borderRadius: "6px",
+                    border: `1px solid ${tierInfo.color}66`,
+                    boxShadow: "0 8px 24px rgba(0,0,0,0.5)",
+                    backdropFilter: "blur(6px)",
+                  }}
+                >
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      marginBottom: "4px",
+                    }}
+                  >
+                    <span
+                      style={{
+                        fontSize: "9.5px",
+                        fontWeight: 700,
+                        letterSpacing: "0.05em",
+                        padding: "2px 5px",
+                        borderRadius: "4px",
+                        background: `${tierInfo.color}25`,
+                        color: tierInfo.color,
+                        border: `1px solid ${tierInfo.color}50`,
+                      }}
+                    >
+                      {tierInfo.badge}
+                    </span>
+                  </div>
+
+                  <strong
+                    style={{
+                      color: "#f8fafc",
+                      fontSize: "12px",
+                      display: "block",
+                      marginBottom: "2px",
+                    }}
+                  >
+                    {isAnchor ? "⚡ " : "🏭 "}
+                    {ind.name}
+                  </strong>
+
+                  <div style={{ color: "#cbd5e1", fontSize: "11px", marginBottom: "4px" }}>
+                    <strong>Sector:</strong> {ind.sector || ind.category || "Industrial Source"}
+                  </div>
+
+                  <div
+                    style={{
+                      fontSize: "10px",
+                      color: "#fca5a5",
+                      marginBottom: "4px",
+                      background: "rgba(0,0,0,0.3)",
+                      padding: "2px 4px",
+                      borderRadius: "3px",
+                    }}
+                  >
+                    <strong>Key Pollutants:</strong> {tierInfo.pollutants}
+                  </div>
+
+                  <div style={{ color: "#38bdf8", fontSize: "10px" }}>
+                    📍 {ind.city}, {ind.state} {ind.address ? `• ${ind.address.split(",")[0]}` : ""}
+                  </div>
+                </div>
+              </Tooltip>
+            </CircleMarker>
+          </Fragment>
+        );
+      })}
+    </>
+  );
+}
+
 export default function MapLeaflet({
   stations,
   plume,
@@ -200,84 +428,11 @@ export default function MapLeaflet({
           ))
         : null}
 
-      {/* Delhi-Only Industrial Facilities & Power Stations with 3-Stage Pollution Tiers */}
-      {layers.industries && industries.length > 0
-        ? industries.map((ind, i) => {
-            const tierInfo = classifyIndustryTier(ind);
-            const isAnchor = tierInfo.tier === 1 && (ind.category === "power" || ind.name.toLowerCase().includes("power") || ind.name.toLowerCase().includes("waste to energy") || ind.name.toLowerCase().includes("wte"));
-            
-            const radius = isAnchor ? 7 : tierInfo.tier === 1 ? 5 : tierInfo.tier === 2 ? 4.2 : 3.6;
-            const strokeColor = isAnchor ? "#ffffff" : tierInfo.tier === 1 ? "#7f1d1d" : tierInfo.tier === 2 ? "#7c2d12" : "#581c87";
-
-            return (
-              <CircleMarker
-                key={ind.id ? `ind-${ind.id}` : `ind-${i}`}
-                center={[ind.latitude, ind.longitude]}
-                radius={radius}
-                pane="ncrIndustries"
-                pathOptions={{
-                  color: strokeColor,
-                  weight: isAnchor ? 2 : 1,
-                  fillColor: tierInfo.color,
-                  fillOpacity: tierInfo.tier === 1 ? 0.95 : 0.85,
-                }}
-              >
-                <Tooltip direction="top" offset={[0, -6]}>
-                  <div
-                    style={{
-                      padding: "6px 9px",
-                      fontSize: "11px",
-                      lineHeight: "1.45",
-                      maxWidth: "240px",
-                      background: "rgba(15, 23, 42, 0.95)",
-                      borderRadius: "6px",
-                      border: `1px solid ${tierInfo.color}66`,
-                      boxShadow: "0 8px 24px rgba(0,0,0,0.5)",
-                    }}
-                  >
-                    {/* Header: Tier Badge */}
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "4px" }}>
-                      <span
-                        style={{
-                          fontSize: "9.5px",
-                          fontWeight: 700,
-                          letterSpacing: "0.05em",
-                          padding: "2px 5px",
-                          borderRadius: "4px",
-                          background: `${tierInfo.color}25`,
-                          color: tierInfo.color,
-                          border: `1px solid ${tierInfo.color}50`,
-                        }}
-                      >
-                        {tierInfo.badge}
-                      </span>
-                    </div>
-
-                    {/* Facility Name */}
-                    <strong style={{ color: "#f8fafc", fontSize: "12px", display: "block", marginBottom: "2px" }}>
-                      {isAnchor ? "⚡ " : "🏭 "}{ind.name}
-                    </strong>
-
-                    {/* Sector & Category */}
-                    <div style={{ color: "#cbd5e1", fontSize: "11px", marginBottom: "4px" }}>
-                      <strong>Sector:</strong> {ind.sector || ind.category || "Industrial Source"}
-                    </div>
-
-                    {/* Key Pollutants */}
-                    <div style={{ fontSize: "10px", color: "#fca5a5", marginBottom: "4px", background: "rgba(0,0,0,0.3)", padding: "2px 4px", borderRadius: "3px" }}>
-                      <strong>Key Pollutants:</strong> {tierInfo.pollutants}
-                    </div>
-
-                    {/* Location */}
-                    <div style={{ color: "#38bdf8", fontSize: "10px" }}>
-                      📍 {ind.city}, {ind.state} {ind.address ? `• ${ind.address.split(",")[0]}` : ""}
-                    </div>
-                  </div>
-                </Tooltip>
-              </CircleMarker>
-            );
-          })
-        : null}
+      {/* Delhi-Only Industrial Facilities with Progressive Sweep & Zoom-Adaptive LOD */}
+      <IndustryMarkersLayer
+        industries={industries}
+        active={Boolean(layers.industries && industries.length > 0)}
+      />
 
       {/* Stations: a soft AQI "plume" glow behind a clickable dot */}
       {layers.stations
