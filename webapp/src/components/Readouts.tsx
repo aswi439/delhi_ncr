@@ -1,14 +1,7 @@
 import { fixed, int, signed, compass } from "@/lib/format";
 import type { HourlyForecast } from "@/lib/types";
 import { Skeleton } from "@/components/ui/skeleton";
-
-/** Lid strength phrased from the hour's ΔT, so it agrees with the number shown. */
-function lidState(dt: number): string {
-  if (dt <= 0.2) return "no lid — ventilated";
-  if (dt < 2) return "weak lid";
-  if (dt < 4) return "moderate lid";
-  return "strong lid";
-}
+import { useTranslation } from "@/i18n";
 
 interface ReadoutsProps {
   hour: HourlyForecast | null;
@@ -19,9 +12,18 @@ interface ReadoutsProps {
  * The readouts driven by the cursor, wrapped in a whole Realism Shiny Border container.
  */
 export function Readouts({ hour, loading }: ReadoutsProps) {
+  const { t } = useTranslation();
   const skel = loading && !hour;
   const val = (node: React.ReactNode) =>
     skel ? <Skeleton style={{ width: "3.4rem", height: "1.4rem" }} /> : node;
+
+  /** Lid strength phrased from the hour's ΔT, so it agrees with the number shown. */
+  const lidState = (dt: number): string => {
+    if (dt <= 0.2) return t("atmosphere.noLidVentilated");
+    if (dt < 2) return t("atmosphere.weakLid");
+    if (dt < 4) return t("atmosphere.moderateLid");
+    return t("atmosphere.strongLid");
+  };
 
   return (
     <article className="realism-box" style={{ width: "100%", marginTop: "1.8rem" }}>
@@ -45,7 +47,7 @@ export function Readouts({ hour, loading }: ReadoutsProps) {
         <div className="realism-inner-glow" />
         <div className="readouts" style={{ margin: 0, border: "none", background: "transparent" }}>
           <div className="ro" style={{ background: "rgba(255, 255, 255, 0.02)", borderRight: "1px solid rgba(255, 255, 255, 0.06)" }}>
-            <p className="ro__k">mixing depth</p>
+            <p className="ro__k">{t("atmosphere.mixingDepth")}</p>
             <p className="ro__v">
               {val(<span>{hour ? int(hour.pbl_height_m) : "—"}</span>)}
               <i>m</i>
@@ -54,31 +56,31 @@ export function Readouts({ hour, loading }: ReadoutsProps) {
           </div>
 
           <div className="ro" style={{ background: "rgba(255, 255, 255, 0.02)", borderRight: "1px solid rgba(255, 255, 255, 0.06)" }}>
-            <p className="ro__k">depth removed</p>
+            <p className="ro__k">{t("atmosphere.depthRemoved")}</p>
             <p className="ro__v ro__v--warn">
               {val(<span>{hour ? fixed(hour.pbl_suppression_pct, 1) : "—"}</span>)}
               <i>%</i>
             </p>
-            <p className="ro__n">by aerosol shading</p>
+            <p className="ro__n">{t("atmosphere.byAerosolShading")}</p>
           </div>
 
           <div className="ro" style={{ background: "rgba(255, 255, 255, 0.02)", borderRight: "1px solid rgba(255, 255, 255, 0.06)" }}>
-            <p className="ro__k">column AOD</p>
+            <p className="ro__k">{t("atmosphere.columnAod")}</p>
             <p className="ro__v">{val(<span>{hour ? fixed(hour.aerosol_optical_depth, 2) : "—"}</span>)}</p>
-            <p className="ro__n">550 nm, from the PM profile</p>
+            <p className="ro__n">{t("atmosphere.aodSub")}</p>
           </div>
 
           <div className="ro" style={{ background: "rgba(255, 255, 255, 0.02)", borderRight: "1px solid rgba(255, 255, 255, 0.06)" }}>
-            <p className="ro__k">surface forcing</p>
+            <p className="ro__k">{t("atmosphere.surfaceForcing")}</p>
             <p className="ro__v">
               {val(<span>{hour ? signed(hour.aerosol_sw_forcing_w_m2, 0) : "—"}</span>)}
               <i>W/m²</i>
             </p>
-            <p className="ro__n">shortwave withheld</p>
+            <p className="ro__n">{t("atmosphere.withheldFromGround")}</p>
           </div>
 
           <div className="ro" style={{ background: "rgba(255, 255, 255, 0.02)", borderRight: "1px solid rgba(255, 255, 255, 0.06)" }}>
-            <p className="ro__k">wind</p>
+            <p className="ro__k">{t("consensus.wind")}</p>
             <p className="ro__v">
               {val(<span>{hour ? fixed(hour.wind_speed_ms, 1) : "—"}</span>)}
               <i>m/s</i>

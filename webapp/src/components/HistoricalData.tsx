@@ -194,21 +194,19 @@ export function HistoricalData({ currentAqi = 220, forecast, cityAggregate }: Hi
   const maxItem = range !== "diurnal" ? currentDataset.find((d) => getMetricValue(d) === maxVal) : null;
   const minItem = range !== "diurnal" ? currentDataset.find((d) => getMetricValue(d) === minVal) : null;
 
-  const peakSubtitle = range === "diurnal"
-    ? "Morning boundary entrainment"
-    : maxItem
+  const peakSubtitle = maxItem
     ? (maxItem.hour === "Now" || maxItem.day.includes("Today")
-        ? "Now (Live Peak Observation)"
+        ? `${t("common.live")} (${t("historic.peakObservation")})`
         : `${maxItem.time || maxItem.day} (${maxItem.hour || maxItem.date})`)
-    : "Peak observation";
+    : t("historic.peakObservation");
 
   const cleanestSubtitle = range === "diurnal"
-    ? "Afternoon maximum mixing depth"
+    ? t("historic.afternoonMixing")
     : minItem
     ? (minItem.hour === "Now" || minItem.day.includes("Today")
-        ? "Now (Live Cleanest Window)"
+        ? t("historic.cleanestLive")
         : `${minItem.time || minItem.day} (${minItem.hour || minItem.date})`)
-    : "Cleanest window";
+    : t("historic.cleanestWindow");
 
   const activeColor =
     activePollutant === "aqi"
@@ -299,7 +297,7 @@ export function HistoricalData({ currentAqi = 220, forecast, cityAggregate }: Hi
               aria-pressed={range === "diurnal"}
               onClick={() => setRange("diurnal")}
             >
-              Diurnal Cycle
+              {t("historic.diurnalCycle")}
             </button>
           </div>
 
@@ -332,13 +330,13 @@ export function HistoricalData({ currentAqi = 220, forecast, cityAggregate }: Hi
             <div className="realism-inner-glow" />
             <div style={{ display: "flex", alignItems: "center", gap: "0.45rem", color: "#38bdf8", fontSize: "11px", fontFamily: "var(--mono)", textTransform: "uppercase", letterSpacing: "0.1em", fontWeight: 700 }}>
               <History size={15} />
-              <span>Average {activePollutant.toUpperCase()}</span>
+              <span>{t("historic.average")} {activePollutant.toUpperCase()}</span>
             </div>
             <div style={{ fontSize: "2.1rem", fontWeight: 800, fontFamily: "var(--mono)", color: "#ffffff", margin: "0.45rem 0 0.2rem", lineHeight: 1 }}>
               {avgVal} <span style={{ fontSize: "0.85rem", fontWeight: 400, color: "var(--mist-dim)" }}>{getMetricUnit()}</span>
             </div>
             <div style={{ fontSize: "11.5px", color: "var(--mist)", marginTop: "0.3rem" }}>
-              {range === "24h" ? "24-hour weighted mean" : range === "7d" ? "7-day rolling baseline" : "Climatological multi-year base"}
+              {range === "24h" ? t("historic.weightedMean") : range === "7d" ? t("historic.rollingBaseline") : t("historic.climatologicalBase")}
             </div>
           </div>
         </article>
@@ -351,7 +349,7 @@ export function HistoricalData({ currentAqi = 220, forecast, cityAggregate }: Hi
             <div className="realism-inner-glow" />
             <div style={{ display: "flex", alignItems: "center", gap: "0.45rem", color: "#f43f5e", fontSize: "11px", fontFamily: "var(--mono)", textTransform: "uppercase", letterSpacing: "0.1em", fontWeight: 700 }}>
               <AlertTriangle size={15} />
-              <span>Peak Observation</span>
+              <span>{t("historic.peakObservation")}</span>
             </div>
             <div style={{ fontSize: "2.1rem", fontWeight: 800, fontFamily: "var(--mono)", color: "#f43f5e", margin: "0.45rem 0 0.2rem", lineHeight: 1 }}>
               {maxVal} <span style={{ fontSize: "0.85rem", fontWeight: 400, color: "var(--mist-dim)" }}>{getMetricUnit()}</span>
@@ -370,7 +368,7 @@ export function HistoricalData({ currentAqi = 220, forecast, cityAggregate }: Hi
             <div className="realism-inner-glow" />
             <div style={{ display: "flex", alignItems: "center", gap: "0.45rem", color: "#10b981", fontSize: "11px", fontFamily: "var(--mono)", textTransform: "uppercase", letterSpacing: "0.1em", fontWeight: 700 }}>
               <CheckCircle2 size={15} />
-              <span>Cleanest Window</span>
+              <span>{t("historic.cleanestWindow")}</span>
             </div>
             <div style={{ fontSize: "2.1rem", fontWeight: 800, fontFamily: "var(--mono)", color: "#10b981", margin: "0.45rem 0 0.2rem", lineHeight: 1 }}>
               {minVal} <span style={{ fontSize: "0.85rem", fontWeight: 400, color: "var(--mist-dim)" }}>{getMetricUnit()}</span>
@@ -389,13 +387,13 @@ export function HistoricalData({ currentAqi = 220, forecast, cityAggregate }: Hi
             <div className="realism-inner-glow" />
             <div style={{ display: "flex", alignItems: "center", gap: "0.45rem", color: "#c084fc", fontSize: "11px", fontFamily: "var(--mono)", textTransform: "uppercase", letterSpacing: "0.1em", fontWeight: 700 }}>
               <TrendingUp size={15} />
-              <span>Day / Night Delta</span>
+              <span>{t("historic.dayNightDelta")}</span>
             </div>
             <div style={{ fontSize: "2.1rem", fontWeight: 800, fontFamily: "var(--mono)", color: "#ffffff", margin: "0.45rem 0 0.2rem", lineHeight: 1 }}>
               +{(maxVal - minVal)} <span style={{ fontSize: "0.85rem", fontWeight: 400, color: "var(--mist-dim)" }}>{getMetricUnit()}</span>
             </div>
             <div style={{ fontSize: "11.5px", color: "var(--mist)", marginTop: "0.3rem" }}>
-              Diurnal amplitude driven by boundary layer collapse
+              {t("historic.diurnalAmplitude")}
             </div>
           </div>
         </article>
@@ -414,13 +412,13 @@ export function HistoricalData({ currentAqi = 220, forecast, cityAggregate }: Hi
               <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
                 <span className="daily-pulse-dot" style={{ background: activeColor, boxShadow: `0 0 10px ${activeColor}` }} />
                 <span style={{ fontSize: "11px", fontFamily: "var(--mono)", textTransform: "uppercase", letterSpacing: "0.12em", color: "var(--cyan)", fontWeight: 700 }}>
-                  High-Precision Retrospective Telemetry
+                  {t("historic.retrospectiveTelemetry")}
                 </span>
               </div>
               <h3 style={{ fontSize: "1.3rem", fontWeight: 600, color: "var(--bone)", margin: "0.25rem 0 0", letterSpacing: "-0.01em" }}>
-                {range === "24h" && "Past 24-Hour Continuous Hourly Timeline"}
-                {range === "7d" && "Past 7-Day Historical Atmospheric Progression"}
-                {range === "diurnal" && "Delhi NCR 24-Hour Diurnal Boundary Layer Cycle"}
+                {range === "24h" && t("historic.timeline24h")}
+                {range === "7d" && t("historic.timeline7d")}
+                {range === "diurnal" && t("historic.timelineDiurnal")}
               </h3>
             </div>
 
@@ -456,7 +454,7 @@ export function HistoricalData({ currentAqi = 220, forecast, cityAggregate }: Hi
                     transition: "all 0.2s ease",
                   }}
                 >
-                  <Waves size={14} /> Luminous Wave
+                  <Waves size={14} /> {t("historic.luminousWave")}
                 </button>
                 <button
                   type="button"
@@ -478,7 +476,7 @@ export function HistoricalData({ currentAqi = 220, forecast, cityAggregate }: Hi
                     transition: "all 0.2s ease",
                   }}
                 >
-                  <BarChart3 size={14} /> Spectral Bars
+                  <BarChart3 size={14} /> {t("historic.spectralBars")}
                 </button>
               </div>
             )}

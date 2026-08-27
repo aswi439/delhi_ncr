@@ -267,24 +267,64 @@ export function ExposureTracker({ currentPm25, forecast }: Props) {
     const conc = clientOptimization?.schedAvg ?? currentPm25;
     if (finalInhaledMass > 400 || conc > 150) {
       return {
-        tier: "Hazardous Exertion",
+        tier: t("exposure.hazardousExertion"),
         color: "#f43f5e",
-        text: "Dangerous particulate lung penetration. Intense outdoor training will deposit heavy toxins deep in the alveoli. Shift indoors or wear certified N95.",
+        text: t("exposure.hazardousExertionText"),
       };
     }
     if (finalInhaledMass > 180 || conc > 90) {
       return {
-        tier: "Elevated Risk",
+        tier: t("exposure.elevatedRisk"),
         color: "#fbbf24",
-        text: "Moderate-to-high exposure during prolonged exertion. Sensitive individuals should lower pace or reschedule to the optimal clean air window.",
+        text: t("exposure.elevatedRiskText"),
       };
     }
     return {
-      tier: "Low-to-Safe Window",
+      tier: t("exposure.lowRisk"),
       color: "#10b981",
-      text: "Air conditions and exertion parameters within manageable health thresholds. Hydration and standard monitoring recommended.",
+      text: t("exposure.lowRiskText"),
     };
-  }, [finalInhaledMass, clientOptimization, currentPm25]);
+  }, [finalInhaledMass, clientOptimization, currentPm25, t]);
+
+  const getActivityLabel = (id: string, def: string) => {
+    switch (id) {
+      case "resting": return t("exposure.activityResting");
+      case "walking": return t("exposure.activityModerate");
+      case "running": return t("exposure.activityHeavy");
+      case "cycling": return t("exposure.activityCycling");
+      case "hiit": return t("exposure.activityHiit");
+      default: return def;
+    }
+  };
+
+  const getActivitySublabel = (id: string, def: string) => {
+    switch (id) {
+      case "resting": return t("exposure.activityRestingSub");
+      case "walking": return t("exposure.activityModerateSub");
+      case "running": return t("exposure.activityHeavySub");
+      case "cycling": return t("exposure.activityCyclingSub");
+      case "hiit": return t("exposure.activityHiitSub");
+      default: return def;
+    }
+  };
+
+  const getMaskLabel = (id: string, def: string) => {
+    switch (id) {
+      case "none": return t("exposure.noMask");
+      case "cloth": return t("exposure.clothMask");
+      case "kn95": return t("exposure.kn95Mask");
+      case "n95": return t("exposure.n95Mask");
+      default: return def;
+    }
+  };
+
+  const timeSlots = [
+    { label: t("exposure.nowLive"), offset: 0 },
+    { label: t("exposure.tomorrow07am"), offset: 17 },
+    { label: t("exposure.tomorrow02pm"), offset: 24 },
+    { label: t("exposure.tomorrow07pm"), offset: 29 },
+    { label: t("exposure.day307am"), offset: 41 },
+  ];
 
   return (
     <section
@@ -356,7 +396,7 @@ export function ExposureTracker({ currentPm25, forecast }: Props) {
         >
           <Clock size={16} style={{ color: "var(--cyan)" }} />
           <span style={{ fontSize: "12.5px", fontFamily: "var(--mono)", color: "var(--bone)" }}>
-            Live Ambient PM2.5: <strong style={{ color: "var(--cyan)", fontSize: "14px" }}>{currentPm25.toFixed(1)} µg/m³</strong>
+            {t("exposure.liveAmbient")}: <strong style={{ color: "var(--cyan)", fontSize: "14px" }}>{currentPm25.toFixed(1)} µg/m³</strong>
           </span>
         </div>
       </div>
@@ -372,10 +412,10 @@ export function ExposureTracker({ currentPm25, forecast }: Props) {
           <div style={{ marginBottom: "1.6rem" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "0.5rem", marginBottom: "0.8rem" }}>
               <label style={{ fontSize: "12px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", color: "var(--cyan)", fontFamily: "var(--mono)" }}>
-                1. Select Exertion Activity &amp; Ventilation Rate
+                {t("exposure.step1")}
               </label>
               <span style={{ fontSize: "12px", fontFamily: "var(--mono)", color: "var(--bone)" }}>
-                Ventilation Rate: <strong style={{ color: "var(--cyan)" }}>{customRate.toFixed(1)} m³/h</strong>
+                {t("exposure.ventilationRate")}: <strong style={{ color: "var(--cyan)" }}>{customRate.toFixed(1)} m³/h</strong>
               </span>
             </div>
 
@@ -411,8 +451,8 @@ export function ExposureTracker({ currentPm25, forecast }: Props) {
                         {act.rate} m³/h
                       </span>
                     </div>
-                    <span style={{ fontSize: "13px", fontWeight: 700, marginBottom: "0.2rem" }}>{act.label}</span>
-                    <span style={{ fontSize: "11px", color: "var(--mist-dim)", lineHeight: 1.3 }}>{act.sublabel}</span>
+                    <span style={{ fontSize: "13px", fontWeight: 700, marginBottom: "0.2rem" }}>{getActivityLabel(act.id, act.label)}</span>
+                    <span style={{ fontSize: "11px", color: "var(--mist-dim)", lineHeight: 1.3 }}>{getActivitySublabel(act.id, act.sublabel)}</span>
                   </button>
                 );
               })}
@@ -421,7 +461,7 @@ export function ExposureTracker({ currentPm25, forecast }: Props) {
             {/* Fine-Tuning Slider for Breathing Rate */}
             <div style={{ marginTop: "1rem", display: "flex", alignItems: "center", gap: "1rem", background: "rgba(0, 0, 0, 0.3)", padding: "0.6rem 1rem", borderRadius: "8px", border: "1px solid rgba(255, 255, 255, 0.05)" }}>
               <span style={{ fontSize: "11px", fontFamily: "var(--mono)", color: "var(--mist-dim)", whiteSpace: "nowrap" }}>
-                Fine-Tune Exertion:
+                {t("exposure.fineTuneExertion")}
               </span>
               <input
                 type="range"
@@ -447,10 +487,10 @@ export function ExposureTracker({ currentPm25, forecast }: Props) {
             <div>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.6rem" }}>
                 <label style={{ fontSize: "12px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", color: "var(--cyan)", fontFamily: "var(--mono)" }}>
-                  2. Activity Duration
+                  {t("exposure.step2")}
                 </label>
                 <span style={{ fontFamily: "var(--mono)", fontSize: "14px", fontWeight: 800, color: "#fff" }}>
-                  {durationHours >= 1 ? `${durationHours} ${durationHours === 1 ? "Hour" : "Hours"}` : `${Math.round(durationHours * 60)} Minutes`}
+                  {durationHours >= 1 ? `${durationHours} ${durationHours === 1 ? t("exposure.hour") : t("exposure.hours")}` : `${Math.round(durationHours * 60)} ${t("exposure.minutes")}`}
                 </span>
               </div>
 
@@ -531,7 +571,7 @@ export function ExposureTracker({ currentPm25, forecast }: Props) {
             <div>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.6rem" }}>
                 <label style={{ fontSize: "12px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", color: "var(--cyan)", fontFamily: "var(--mono)" }}>
-                  3. Scheduled Start Window (72h Horizon)
+                  {t("exposure.step3")}
                 </label>
                 <span style={{ fontFamily: "var(--mono)", fontSize: "13px", fontWeight: 800, color: "var(--amber)" }}>
                   {formatTimeSlot(startHourOffset)}
@@ -553,13 +593,7 @@ export function ExposureTracker({ currentPm25, forecast }: Props) {
 
               {/* Contextual Smart Jump Chips */}
               <div style={{ display: "flex", gap: "0.4rem", flexWrap: "wrap" }}>
-                {[
-                  { label: "Now (Live)", offset: 0 },
-                  { label: "Tomorrow 07:00 AM", offset: 17 },
-                  { label: "Tomorrow 02:00 PM", offset: 24 },
-                  { label: "Tomorrow 07:00 PM", offset: 29 },
-                  { label: "Day 3 07:00 AM", offset: 41 },
-                ].map((slot) => (
+                {timeSlots.map((slot) => (
                   <button
                     key={slot.label}
                     type="button"
@@ -590,7 +624,7 @@ export function ExposureTracker({ currentPm25, forecast }: Props) {
           {/* 4. Mask & Personal Filtration Protection Factor */}
           <div>
             <label style={{ fontSize: "12px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", color: "var(--cyan)", fontFamily: "var(--mono)", display: "block", marginBottom: "0.6rem" }}>
-              4. Mask &amp; Personal PPE Filtration
+              {t("exposure.step4")}
             </label>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "0.65rem" }}>
               {MASK_OPTIONS.map((m) => {
@@ -617,8 +651,10 @@ export function ExposureTracker({ currentPm25, forecast }: Props) {
                   >
                     <Icon size={18} style={{ color: isSelected ? "#10b981" : "var(--mist)" }} />
                     <div>
-                      <div style={{ fontSize: "12px", fontWeight: 700 }}>{m.label}</div>
-                      <div style={{ fontSize: "10.5px", color: isSelected ? "#10b981" : "var(--mist-dim)", fontFamily: "var(--mono)" }}>{m.sub}</div>
+                      <div style={{ fontSize: "12px", fontWeight: 700 }}>{getMaskLabel(m.id, m.label)}</div>
+                      <div style={{ fontSize: "10.5px", color: isSelected ? "#10b981" : "var(--mist-dim)", fontFamily: "var(--mono)" }}>
+                        {m.efficiency * 100}% {t("exposure.filtration")}
+                      </div>
                     </div>
                   </button>
                 );
@@ -639,7 +675,7 @@ export function ExposureTracker({ currentPm25, forecast }: Props) {
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <div style={{ display: "flex", alignItems: "center", gap: "0.45rem", color: "#38bdf8", fontSize: "11px", fontFamily: "var(--mono)", textTransform: "uppercase", letterSpacing: "0.1em", fontWeight: 700 }}>
                 <Zap size={15} />
-                <span>Inhaled Alveolar PM2.5</span>
+                <span>{t("exposure.inhaledAlveolar")}</span>
               </div>
               {activeMask.efficiency > 0 && (
                 <span style={{ fontSize: "10px", fontFamily: "var(--mono)", background: "#10b98120", color: "#10b981", border: "1px solid #10b98140", padding: "1px 6px", borderRadius: "4px" }}>
@@ -652,7 +688,7 @@ export function ExposureTracker({ currentPm25, forecast }: Props) {
               {finalInhaledMass} <span style={{ fontSize: "0.95rem", fontWeight: 400, color: "var(--mist-dim)" }}>µg</span>
             </div>
             <div style={{ fontSize: "11.5px", color: "var(--mist)", marginTop: "0.3rem" }}>
-              Total particulate mass trapped in pulmonary alveoli for {durationHours}h.
+              {t("exposure.totalMassTrapped")} {durationHours}{t("exposure.hours").charAt(0).toLowerCase()}.
             </div>
 
             <div style={{ marginTop: "0.8rem", background: "rgba(255, 255, 255, 0.06)", height: "6px", borderRadius: "3px", overflow: "hidden" }}>
@@ -677,7 +713,7 @@ export function ExposureTracker({ currentPm25, forecast }: Props) {
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <div style={{ display: "flex", alignItems: "center", gap: "0.45rem", color: "#fbbf24", fontSize: "11px", fontFamily: "var(--mono)", textTransform: "uppercase", letterSpacing: "0.1em", fontWeight: 700 }}>
                 <Cigarette size={15} />
-                <span>Cigarette Equivalence</span>
+                <span>{t("exposure.cigaretteEquivalence")}</span>
               </div>
             </div>
 
@@ -685,7 +721,7 @@ export function ExposureTracker({ currentPm25, forecast }: Props) {
               {finalCigarettes} <span style={{ fontSize: "0.95rem", fontWeight: 400, color: "var(--mist-dim)" }}>cig</span>
             </div>
             <div style={{ fontSize: "11.5px", color: "var(--mist)", marginTop: "0.3rem" }}>
-              Berkeley Earth standard: 22 µg/m³ PM2.5 in 24h = 1 cigarette.
+              {t("exposure.berkeleyStandard")}
             </div>
 
             <div style={{ display: "flex", gap: "4px", marginTop: "0.8rem" }}>
@@ -746,7 +782,7 @@ export function ExposureTracker({ currentPm25, forecast }: Props) {
               <Sparkles size={20} style={{ color: "#fbbf24" }} />
               <div>
                 <h3 style={{ fontSize: "1.3rem", fontWeight: 600, color: "var(--bone)", margin: 0 }}>
-                  72-Hour Smart Activity Window Optimization
+                  {t("exposure.smartOptimization")}
                 </h3>
                 <p style={{ margin: "0.2rem 0 0", fontSize: "12px", color: "var(--mist)" }}>
                   Atmospheric physics sliding-window solver across the entire 72h forecast horizon.

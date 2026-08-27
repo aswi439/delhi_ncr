@@ -86,8 +86,7 @@ export function InversionStrip({ inversion, cursor }: InversionStripProps) {
       </div>
 
       <p className="section__lede section__lede--sm">
-        ΔT between 925 and 1000 hPa. Positive values indicate a thermal lid trapping pollutants beneath it.
-        Negative values denote normal environmental cooling with height (active vertical dispersion).
+        {t("atmosphere.inversionLede")}
       </p>
 
       {inversion.status === "error" ? (
@@ -103,7 +102,7 @@ export function InversionStrip({ inversion, cursor }: InversionStripProps) {
             ))}
           </div>
           <div className="inv__axis">
-            <span>now</span>
+            <span>{t("atmosphere.now")}</span>
             <span>+24</span>
             <span>+48</span>
             <span>+72 h</span>
@@ -126,7 +125,7 @@ export function InversionStrip({ inversion, cursor }: InversionStripProps) {
             })}
           </div>
           <div className="inv__axis">
-            <span>now</span>
+            <span>{t("atmosphere.now")}</span>
             <span>+24</span>
             <span>+48</span>
             <span>+72 h</span>
@@ -136,20 +135,20 @@ export function InversionStrip({ inversion, cursor }: InversionStripProps) {
 
       <dl className="inv__stats">
         <div>
-          <dt>ΔT at cursor</dt>
+          <dt>{t("atmosphere.deltaTCursor")}</dt>
           <dd>{cur ? `${signed(cur.delta_t_celsius, 1)} °C` : "—"}</dd>
         </div>
         <div>
-          <dt>severity</dt>
-          <dd>{cur ? (cur.severity === "None" ? "None (Normal Lapse)" : cur.severity) : "—"}</dd>
+          <dt>{t("atmosphere.severity")}</dt>
+          <dd>{cur ? (cur.severity === "None" ? t("atmosphere.noneNormalLapse") : cur.severity) : "—"}</dd>
         </div>
         <div>
-          <dt>lapse rate</dt>
+          <dt>{t("atmosphere.lapseRate")}</dt>
           <dd>{cur ? `${signed(cur.lapse_rate_k_per_km, 1)} K/km` : "—"}</dd>
         </div>
         <div>
-          <dt>hours with a lid</dt>
-          <dd>{series.length ? `${lidHours} of ${series.length}` : "—"}</dd>
+          <dt>{t("atmosphere.hoursWithLid")}</dt>
+          <dd>{series.length ? `${lidHours} ${t("map.ofUnits")} ${series.length}` : "—"}</dd>
         </div>
       </dl>
     </section>

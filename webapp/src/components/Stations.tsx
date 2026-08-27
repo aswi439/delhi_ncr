@@ -16,8 +16,22 @@ export function Stations({ stations, overview }: StationsProps) {
   const rows = (stations.data ?? []).slice().sort((a, b) => b.aqi - a.aqi); // worst first
   const ov = overview.data;
 
+  const getCategoryLabel = (cat?: string) => {
+    if (!cat) return "";
+    switch (cat.toLowerCase()) {
+      case "good": return t("hero.categories.good");
+      case "satisfactory": return t("hero.categories.satisfactory");
+      case "moderate": return t("hero.categories.moderate");
+      case "poor": return t("hero.categories.poor");
+      case "very poor": return t("hero.categories.veryPoor");
+      case "severe": return t("hero.categories.severe");
+      case "hazardous": return t("hero.categories.hazardous");
+      default: return cat;
+    }
+  };
+
   const cityLine = ov
-    ? `Delhi ${int(ov.aqi)} · ${ov.category}${ov.updated ? ` · ${t("stations.updated")} ${clock(ov.updated)}` : ""}`
+    ? `Delhi ${int(ov.aqi)} · ${getCategoryLabel(ov.category)}${ov.updated ? ` · ${t("stations.updated")} ${clock(ov.updated)}` : ""}`
     : "";
 
   return (
@@ -58,13 +72,13 @@ export function Stations({ stations, overview }: StationsProps) {
       ) : (
         <div className="stations">
           {rows.map((s) => (
-            <div className="st" key={s.uid} title={s.dominant_pollutant ? `dominant ${s.dominant_pollutant}` : undefined}>
+            <div className="st" key={s.uid} title={s.dominant_pollutant ? `${t("hero.dominant")} ${s.dominant_pollutant}` : undefined}>
               <span className="st__aqi" style={{ ["--c" as string]: aqiColor(s.aqi) }}>
                 {int(s.aqi)}
               </span>
               <span className="st__body">
                 <span className="st__name">{s.name}</span>
-                <span className="st__cat">{s.category}</span>
+                <span className="st__cat">{getCategoryLabel(s.category)}</span>
               </span>
             </div>
           ))}
