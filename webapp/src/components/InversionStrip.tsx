@@ -3,6 +3,7 @@ import { signed } from "@/lib/format";
 import type { InversionStatus } from "@/lib/types";
 import { PanelMessage } from "@/components/ui/panel-message";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useTranslation } from "@/i18n";
 
 interface InversionStripProps {
   inversion: Panel<InversionStatus[]>;
@@ -10,6 +11,7 @@ interface InversionStripProps {
 }
 
 export function InversionStrip({ inversion, cursor }: InversionStripProps) {
+  const { t } = useTranslation();
   const series = inversion.data ?? [];
   const idx = Math.max(0, Math.min(series.length - 1, cursor));
   const cur = series[idx] ?? null;
@@ -52,7 +54,7 @@ export function InversionStrip({ inversion, cursor }: InversionStripProps) {
         <div>
           <p className="eyebrow">lid</p>
           <h2 className="section__h section__h--sm" id="inv-h">
-            Inversion watch
+            {t("atmosphere.inversionStrength")}
           </h2>
         </div>
         <div style={{ marginTop: "0.25rem" }}>
@@ -78,7 +80,7 @@ export function InversionStrip({ inversion, cursor }: InversionStripProps) {
                 background: lidHours > 0 ? "var(--aqi-5)" : "#38bdf8",
               }}
             />
-            {lidHours > 0 ? `${lidHours}h Inversion Lid Active` : "Normal Lapse Rate (Well-Mixed Atmosphere)"}
+            {lidHours > 0 ? t("atmosphere.inversionActive") : t("atmosphere.inversionNormal")}
           </span>
         </div>
       </div>

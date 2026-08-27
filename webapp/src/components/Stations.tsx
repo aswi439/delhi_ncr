@@ -4,6 +4,7 @@ import { clock, int } from "@/lib/format";
 import type { CityOverview, StationReading } from "@/lib/types";
 import { PanelMessage } from "@/components/ui/panel-message";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useTranslation } from "@/i18n";
 
 interface StationsProps {
   stations: Panel<StationReading[]>;
@@ -11,24 +12,24 @@ interface StationsProps {
 }
 
 export function Stations({ stations, overview }: StationsProps) {
+  const { t } = useTranslation();
   const rows = (stations.data ?? []).slice().sort((a, b) => b.aqi - a.aqi); // worst first
   const ov = overview.data;
 
   const cityLine = ov
-    ? `Delhi ${int(ov.aqi)} · ${ov.category}${ov.updated ? ` · updated ${clock(ov.updated)}` : ""}`
+    ? `Delhi ${int(ov.aqi)} · ${ov.category}${ov.updated ? ` · ${t("stations.updated")} ${clock(ov.updated)}` : ""}`
     : "";
 
   return (
     <section className="section section--stations" aria-labelledby="st-h">
       <div className="section__head">
         <div>
-          <p className="eyebrow">ground truth</p>
+          <p className="eyebrow">{t("stations.groundTruth")}</p>
           <h2 className="section__h section__h--sm" id="st-h">
-            Live monitoring network
+            {t("stations.title")}
           </h2>
           <p className="section__lede section__lede--sm">
-            CPCB stations via OpenAQ, ordered worst first. The nearest reading also anchors hour 0 of
-            the forecast, so the curve opens on observed air rather than on climatology.
+            {t("stations.subtitle")}
           </p>
         </div>
         <p className="stations__city">{cityLine}</p>
@@ -48,12 +49,11 @@ export function Stations({ stations, overview }: StationsProps) {
         </div>
       ) : stations.status === "error" ? (
         <PanelMessage tone="warn">
-          <b>OpenAQ feed unavailable.</b> Live station readings could not be retrieved. This is a live
-          upstream, not model output — nothing is shown here rather than a fabricated network.
+          <b>{t("stations.openAqUnavailable")}</b>
         </PanelMessage>
       ) : rows.length === 0 ? (
         <PanelMessage>
-          <b>No stations reporting.</b> The OpenAQ query returned an empty set for Delhi NCR right now.
+          <b>{t("stations.noStations")}</b>
         </PanelMessage>
       ) : (
         <div className="stations">

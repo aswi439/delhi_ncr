@@ -3,6 +3,7 @@ import { AlertTriangle, Wind, Thermometer, Droplets, Gauge } from "lucide-react"
 import { Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import type { CityAggregateResponse, ConsensusResponse } from "@/lib/types";
 import { DailyForecastStrip } from "@/components/DailyForecastStrip";
+import { useTranslation } from "@/i18n";
 
 interface Props {
   data: ConsensusResponse | null;
@@ -16,6 +17,7 @@ function metric(value: number | undefined, unit: string) {
 }
 
 export function ConsensusDashboard({ data, loading, error, cityAggregate }: Props) {
+  const { t } = useTranslation();
   const metrics = data?.metrics;
 
   const liveAqi = cityAggregate?.overall_aqi ?? (metrics ? Math.round(metrics.aqi) : 320);
@@ -71,17 +73,17 @@ export function ConsensusDashboard({ data, loading, error, cityAggregate }: Prop
       {severe && (
         <div className="severe-alert" role="alert">
           <AlertTriangle size={18} aria-hidden="true" />
-          <span>⚠️ SEVERE POLLUTION ALERT: AQI projected to exceed 400 in the next 72 hours. Activating emergency response protocols.</span>
+          <span>⚠️ {t("consensus.severeAlert")}</span>
         </div>
       )}
       <div className="consensus-head">
         <div>
-          <p className="eyebrow">five-source consensus</p>
-          <h2 className="section__h section__h--sm">Delhi NCR live conditions</h2>
-          <p className="section__lede section__lede--sm">Physics-informed projection anchored to current observations.</p>
+          <p className="eyebrow">{t("consensus.fiveSourceConsensus")}</p>
+          <h2 className="section__h section__h--sm">{t("consensus.title")}</h2>
+          <p className="section__lede section__lede--sm">{t("consensus.subtitle")}</p>
         </div>
         <span className="source-count">
-          Aggregated across {cityAggregate?.station_count ?? 43} stations + {data?.source_count ?? 2} meteorological feeds.
+          {t("consensus.aggregatedAcross")} {cityAggregate?.station_count ?? 43} {t("consensus.stationsCount")} + {data?.source_count ?? 2} {t("consensus.meteoFeeds")}.
         </span>
       </div>
       {error && <p className="consensus-error">Consensus feed unavailable: {error}</p>}
@@ -102,7 +104,7 @@ export function ConsensusDashboard({ data, loading, error, cityAggregate }: Prop
               {loading ? "—" : liveAqi}
             </strong>
             <small style={{ color: "var(--mist-faint)", fontSize: "0.72rem" }}>
-              {cityAggregate?.dominant_pollutant ? `Dominant ${cityAggregate.dominant_pollutant}` : "CPCB Max"}
+              {cityAggregate?.dominant_pollutant ? `${t("hero.dominant")} ${cityAggregate.dominant_pollutant}` : "CPCB Max"}
             </small>
           </div>
         </article>
@@ -149,7 +151,7 @@ export function ConsensusDashboard({ data, loading, error, cityAggregate }: Prop
             <div className="realism-inner-glow" />
             <div style={{ display: "flex", alignItems: "center", gap: "0.55rem" }}>
               <Thermometer size={16} style={{ color: "#3fff75" }} />
-              <span style={{ color: "var(--mist-dim)", font: "0.7rem var(--mono)", textTransform: "uppercase", letterSpacing: "0.08em" }}>Temperature</span>
+              <span style={{ color: "var(--mist-dim)", font: "0.7rem var(--mono)", textTransform: "uppercase", letterSpacing: "0.08em" }}>{t("consensus.temperature")}</span>
             </div>
             <strong style={{ fontSize: "1.8rem", fontWeight: 600, color: "var(--bone)", margin: "0.25rem 0 0.1rem" }}>
               {loading ? "—" : metric(liveTemp, "°")}
@@ -166,7 +168,7 @@ export function ConsensusDashboard({ data, loading, error, cityAggregate }: Prop
             <div className="realism-inner-glow" />
             <div style={{ display: "flex", alignItems: "center", gap: "0.55rem" }}>
               <Wind size={16} style={{ color: "#3fff75" }} />
-              <span style={{ color: "var(--mist-dim)", font: "0.7rem var(--mono)", textTransform: "uppercase", letterSpacing: "0.08em" }}>Wind</span>
+              <span style={{ color: "var(--mist-dim)", font: "0.7rem var(--mono)", textTransform: "uppercase", letterSpacing: "0.08em" }}>{t("consensus.wind")}</span>
             </div>
             <strong style={{ fontSize: "1.8rem", fontWeight: 600, color: "var(--bone)", margin: "0.25rem 0 0.1rem" }}>
               {loading ? "—" : metric(liveWind, "")}
@@ -192,10 +194,10 @@ export function ConsensusDashboard({ data, loading, error, cityAggregate }: Prop
           <div className="realism-blob" />
           <div className="realism-inner">
             <div className="realism-inner-glow" />
-            <p className="eyebrow">explainability engine</p>
-            <h3 style={{ margin: "0.35rem 0 0.8rem", fontSize: "1.05rem", fontWeight: 500, color: "var(--bone)" }}>Why the model expects this</h3>
+            <p className="eyebrow">{t("consensus.explainabilityEngine")}</p>
+            <h3 style={{ margin: "0.35rem 0 0.8rem", fontSize: "1.05rem", fontWeight: 500, color: "var(--bone)" }}>{t("consensus.whyModelExpects")}</h3>
             <p style={{ color: "var(--mist)", lineHeight: 1.65, fontSize: "0.9rem", margin: 0 }}>
-              {data?.explainability ?? "Waiting for the consensus engine to evaluate wind, temperature, and particulate conditions."}
+              {data?.explainability ?? "Evaluating multi-source meteorological convergence and diurnal stability."}
             </p>
           </div>
         </article>
@@ -209,7 +211,7 @@ export function ConsensusDashboard({ data, loading, error, cityAggregate }: Prop
             <div className="chart-title">
               <div>
                 <p className="eyebrow">deterministic projection</p>
-                <h3 style={{ margin: "0.35rem 0 0.8rem", fontSize: "1.05rem", fontWeight: 500, color: "var(--bone)" }}>72-hour PM2.5 and AQI outlook</h3>
+                <h3 style={{ margin: "0.35rem 0 0.8rem", fontSize: "1.05rem", fontWeight: 500, color: "var(--bone)" }}>72h PM2.5 &amp; AQI Outlook</h3>
               </div>
               <span style={{ color: "var(--mist-faint)", font: "0.68rem var(--mono)", whiteSpace: "nowrap" }}>
                 72-Hour Continuous Atmospheric Trajectory

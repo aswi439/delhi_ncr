@@ -32,6 +32,7 @@ import type {
   ExposureResponse,
   ForecastResponse,
 } from "@/lib/types";
+import { useTranslation } from "@/i18n";
 
 interface Props {
   currentPm25: number;
@@ -103,6 +104,7 @@ const MASK_OPTIONS = [
 ];
 
 export function ExposureTracker({ currentPm25, forecast }: Props) {
+  const { t } = useTranslation();
   const [selectedArchetype, setSelectedArchetype] = useState<string>("running");
   const [customRate, setCustomRate] = useState<number>(2.8);
   const [durationHours, setDurationHours] = useState<number>(1.5);
@@ -323,7 +325,7 @@ export function ExposureTracker({ currentPm25, forecast }: Props) {
               lineHeight: 1.15,
             }}
           >
-            Personalized Exposure Tracker &amp; Smart Activity Planner
+            {t("exposure.title")}
           </h2>
           <p
             className="section__lede"
@@ -335,7 +337,7 @@ export function ExposureTracker({ currentPm25, forecast }: Props) {
               margin: 0,
             }}
           >
-            Calculates exact alveolar inhaled particulate mass ($\mu g$) and equivalent cigarette burden based on physical exertion rates, mask filtration, and 72-hour sliding window atmospheric soundings.
+            {t("exposure.subtitle")}
           </p>
         </div>
 

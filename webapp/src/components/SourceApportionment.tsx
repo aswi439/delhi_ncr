@@ -27,6 +27,7 @@ import type {
   ApportionmentHour,
   SourceApportionmentResponse,
 } from "@/lib/types";
+import { useTranslation } from "@/i18n";
 
 interface Props {
   currentPm25: number;
@@ -47,6 +48,7 @@ const VEHICLE_COLORS = {
 };
 
 export function SourceApportionment({ currentPm25, currentNo2 = 38.5 }: Props) {
+  const { t } = useTranslation();
   const [isManual, setIsManual] = useState(false);
   const [manualNo2, setManualNo2] = useState<number>(currentNo2);
   const [manualHour, setManualHour] = useState<number>(new Date().getHours());
@@ -263,13 +265,13 @@ export function SourceApportionment({ currentPm25, currentNo2 = 38.5 }: Props) {
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "1rem" }}>
           <div>
             <p className="eyebrow" style={{ color: "var(--cyan)", display: "flex", alignItems: "center", gap: "0.4rem", marginBottom: "0.3rem" }}>
-              <Compass size={14} /> Chemical-Tracer &amp; Vehicle Emission Engine
+              <Compass size={14} /> {t("sourceApportionment.tracerBadge")}
             </p>
             <h2 style={{ fontSize: "clamp(1.5rem, 2.8vw, 2.1rem)", fontWeight: 600, color: "var(--bone)", margin: 0, letterSpacing: "-0.02em" }}>
-              Dynamic Source Apportionment &amp; Transport Fleet Dynamics
+              {t("sourceApportionment.title")}
             </h2>
             <p style={{ color: "var(--mist)", fontSize: "0.95rem", marginTop: "0.4rem", maxWidth: "820px", lineHeight: 1.55 }}>
-              Where does Delhi NCR&apos;s air pollution originate? We use real-time Nitrogen Dioxide (NO₂) chemical tracer diagnostics and fleet models to split ambient PM2.5 into <strong>4 core source sectors</strong> and zoom into <strong>vehicle fleet modes</strong>.
+              {t("sourceApportionment.subtitle")}
             </p>
           </div>
 
@@ -294,7 +296,7 @@ export function SourceApportionment({ currentPm25, currentNo2 = 38.5 }: Props) {
               }}
             >
               <Sliders size={14} />
-              {isManual ? "Simulation Mode (Active)" : "Live Sensor Sync"}
+              {isManual ? t("sourceApportionment.simulationMode") : t("sourceApportionment.liveSync")}
             </button>
           </div>
         </div>
@@ -303,7 +305,7 @@ export function SourceApportionment({ currentPm25, currentNo2 = 38.5 }: Props) {
         <div style={{ marginTop: "1.4rem", background: "rgba(10, 15, 22, 0.8)", border: "1px solid var(--hairline)", borderRadius: "10px", padding: "1rem 1.25rem" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "0.5rem", marginBottom: "0.65rem" }}>
             <span style={{ fontSize: "12px", fontFamily: "var(--mono)", color: "var(--bone)", fontWeight: 600 }}>
-              Total Ambient PM2.5: <span style={{ color: "var(--cyan)", fontSize: "1.05rem" }}>{currentPm25.toFixed(1)} µg/m³</span> (100% Mass Apportioned)
+              {t("sourceApportionment.totalAmbient")}: <span style={{ color: "var(--cyan)", fontSize: "1.05rem" }}>{currentPm25.toFixed(1)} µg/m³</span> (100% {t("cardstack.activeTelemetry")})
             </span>
             <span style={{ fontSize: "11px", fontFamily: "var(--mono)", color: "var(--mist-faint)" }}>
               NO₂ Tracer: <strong style={{ color: "var(--cyan)" }}>{activeNo2.toFixed(1)} µg/m³</strong> • Status: <strong style={{ color: "var(--emerald)" }}>{data?.proxy_status ?? "Live Baseline"}</strong>
@@ -311,10 +313,10 @@ export function SourceApportionment({ currentPm25, currentNo2 = 38.5 }: Props) {
           </div>
 
           <div style={{ display: "flex", height: "14px", borderRadius: "7px", overflow: "hidden", background: "rgba(255, 255, 255, 0.05)" }}>
-            <div style={{ width: `${data?.transport_pct ?? 25}%`, background: SECTOR_COLORS.transport, transition: "width 0.4s ease" }} title={`Vehicles: ${data?.transport_pct?.toFixed(1)}%`} />
-            <div style={{ width: `${data?.dust_pct ?? 30}%`, background: SECTOR_COLORS.dust, transition: "width 0.4s ease" }} title={`Road Dust: ${data?.dust_pct?.toFixed(1)}%`} />
-            <div style={{ width: `${data?.biomass_pct ?? 25}%`, background: SECTOR_COLORS.biomass, transition: "width 0.4s ease" }} title={`Biomass/Stubble: ${data?.biomass_pct?.toFixed(1)}%`} />
-            <div style={{ width: `${data?.industry_pct ?? 20}%`, background: SECTOR_COLORS.industry, transition: "width 0.4s ease" }} title={`Industry: ${data?.industry_pct?.toFixed(1)}%`} />
+            <div style={{ width: `${data?.transport_pct ?? 25}%`, background: SECTOR_COLORS.transport, transition: "width 0.4s ease" }} title={`${t("sourceApportionment.vehicular")}: ${data?.transport_pct?.toFixed(1)}%`} />
+            <div style={{ width: `${data?.dust_pct ?? 30}%`, background: SECTOR_COLORS.dust, transition: "width 0.4s ease" }} title={`${t("sourceApportionment.roadDust")}: ${data?.dust_pct?.toFixed(1)}%`} />
+            <div style={{ width: `${data?.biomass_pct ?? 25}%`, background: SECTOR_COLORS.biomass, transition: "width 0.4s ease" }} title={`${t("sourceApportionment.biomassBurning")}: ${data?.biomass_pct?.toFixed(1)}%`} />
+            <div style={{ width: `${data?.industry_pct ?? 20}%`, background: SECTOR_COLORS.industry, transition: "width 0.4s ease" }} title={`${t("sourceApportionment.industrial")}: ${data?.industry_pct?.toFixed(1)}%`} />
           </div>
         </div>
       </div>
@@ -336,7 +338,7 @@ export function SourceApportionment({ currentPm25, currentNo2 = 38.5 }: Props) {
               <div className="realism-inner-glow" />
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <span style={{ fontSize: "11px", fontFamily: "var(--mono)", textTransform: "uppercase", color: SECTOR_COLORS.transport, fontWeight: 700 }}>
-                  Vehicular Transport
+                  {t("sourceApportionment.vehicular")}
                 </span>
                 <Car size={18} style={{ color: SECTOR_COLORS.transport }} />
               </div>
@@ -362,7 +364,7 @@ export function SourceApportionment({ currentPm25, currentNo2 = 38.5 }: Props) {
               <div className="realism-inner-glow" />
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <span style={{ fontSize: "11px", fontFamily: "var(--mono)", textTransform: "uppercase", color: SECTOR_COLORS.dust, fontWeight: 700 }}>
-                  Road &amp; Soil Dust
+                  {t("sourceApportionment.roadDust")}
                 </span>
                 <Wind size={18} style={{ color: SECTOR_COLORS.dust }} />
               </div>
@@ -388,7 +390,7 @@ export function SourceApportionment({ currentPm25, currentNo2 = 38.5 }: Props) {
               <div className="realism-inner-glow" />
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <span style={{ fontSize: "11px", fontFamily: "var(--mono)", textTransform: "uppercase", color: SECTOR_COLORS.biomass, fontWeight: 700 }}>
-                  Biomass / Stubble
+                  {t("sourceApportionment.biomassBurning")}
                 </span>
                 <Flame size={18} style={{ color: SECTOR_COLORS.biomass }} />
               </div>
@@ -414,7 +416,7 @@ export function SourceApportionment({ currentPm25, currentNo2 = 38.5 }: Props) {
               <div className="realism-inner-glow" />
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <span style={{ fontSize: "11px", fontFamily: "var(--mono)", textTransform: "uppercase", color: SECTOR_COLORS.industry, fontWeight: 700 }}>
-                  Industry &amp; Power
+                  {t("sourceApportionment.industrial")}
                 </span>
                 <Factory size={18} style={{ color: SECTOR_COLORS.industry }} />
               </div>
@@ -444,7 +446,7 @@ export function SourceApportionment({ currentPm25, currentNo2 = 38.5 }: Props) {
               </span>
             </div>
             <h3 style={{ fontSize: "1.25rem", fontWeight: 600, color: "var(--bone)", margin: "0.2rem 0 0" }}>
-              Vehicle Fleet Sub-Breakdown by Transport Mode
+              {t("sourceApportionment.fleetBreakdown")}
             </h3>
           </div>
 
@@ -483,7 +485,7 @@ export function SourceApportionment({ currentPm25, currentNo2 = 38.5 }: Props) {
             )}
             <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", color: VEHICLE_COLORS.trucks, marginBottom: "0.5rem" }}>
               <Truck size={18} />
-              <span style={{ fontSize: "13px", fontWeight: 700 }}>Heavy Diesel Trucks &amp; Freight</span>
+              <span style={{ fontSize: "13px", fontWeight: 700 }}>{t("sourceApportionment.trucks")}</span>
             </div>
             <div style={{ display: "flex", alignItems: "baseline", gap: "0.5rem", margin: "0.3rem 0" }}>
               <span style={{ fontSize: "2rem", fontWeight: 800, fontFamily: "var(--mono)", color: VEHICLE_COLORS.trucks }}>
@@ -521,7 +523,7 @@ export function SourceApportionment({ currentPm25, currentNo2 = 38.5 }: Props) {
             )}
             <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", color: VEHICLE_COLORS.twoWheelers, marginBottom: "0.5rem" }}>
               <Activity size={18} />
-              <span style={{ fontSize: "13px", fontWeight: 700 }}>2 &amp; 3-Wheelers (Bikes / Autos)</span>
+              <span style={{ fontSize: "13px", fontWeight: 700 }}>{t("sourceApportionment.twoWheelers")}</span>
             </div>
             <div style={{ display: "flex", alignItems: "baseline", gap: "0.5rem", margin: "0.3rem 0" }}>
               <span style={{ fontSize: "2rem", fontWeight: 800, fontFamily: "var(--mono)", color: VEHICLE_COLORS.twoWheelers }}>
@@ -553,7 +555,7 @@ export function SourceApportionment({ currentPm25, currentNo2 = 38.5 }: Props) {
           >
             <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", color: VEHICLE_COLORS.cars, marginBottom: "0.5rem" }}>
               <Car size={18} />
-              <span style={{ fontSize: "13px", fontWeight: 700 }}>Passenger Cars, Taxis &amp; LCVs</span>
+              <span style={{ fontSize: "13px", fontWeight: 700 }}>{t("sourceApportionment.cars")}</span>
             </div>
             <div style={{ display: "flex", alignItems: "baseline", gap: "0.5rem", margin: "0.3rem 0" }}>
               <span style={{ fontSize: "2rem", fontWeight: 800, fontFamily: "var(--mono)", color: VEHICLE_COLORS.cars }}>
@@ -668,7 +670,7 @@ export function SourceApportionment({ currentPm25, currentNo2 = 38.5 }: Props) {
                 </span>
               </div>
               <h3 style={{ fontSize: "1.35rem", fontWeight: 600, color: "var(--bone)", margin: "0.25rem 0 0", letterSpacing: "-0.02em" }}>
-                Predictive Particulate Decomposition (Next 3 Days)
+                {t("sourceApportionment.timeSeriesTitle")}
               </h3>
             </div>
 

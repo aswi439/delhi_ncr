@@ -23,6 +23,7 @@ import type {
   HourlyForecast,
   Pollutant,
 } from "@/lib/types";
+import { useTranslation } from "@/i18n";
 
 type ViewHorizon = "7d" | "30d" | "72h";
 
@@ -125,6 +126,7 @@ export function PollutantForecasts({
   consensus,
   cityAggregate,
 }: PollutantForecastsProps) {
+  const { t } = useTranslation();
   const [horizon, setHorizon] = useState<ViewHorizon>("7d");
   const [hoveredIdx, setHoveredIdx] = useState<{ [key: string]: number | null }>({});
 
@@ -465,7 +467,7 @@ export function PollutantForecasts({
               lineHeight: 1.15,
             }}
           >
-            Pollutant Forecast &amp; Particle Breakdown
+            {t("forecast.title")}
           </h2>
           <p
             className="section__lede"
@@ -477,7 +479,7 @@ export function PollutantForecasts({
               margin: 0,
             }}
           >
-            Deterministic prognostic simulation for criteria pollutants across Delhi-NCR anchored to live observations.
+            {t("forecast.subtitle")}
           </p>
         </div>
 

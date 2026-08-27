@@ -28,6 +28,7 @@ import {
 import { aqiToCategory, categoryColor } from "@/lib/aqi";
 import type { Panel } from "@/hooks/useForecastData";
 import type { AqiCategory, CityAggregateResponse, ForecastResponse } from "@/lib/types";
+import { useTranslation } from "@/i18n";
 
 type TimeRange = "24h" | "7d" | "diurnal";
 
@@ -58,6 +59,7 @@ function safeCategoryColor(cat: string): string {
 }
 
 export function HistoricalData({ currentAqi = 220, forecast, cityAggregate }: HistoricalDataProps) {
+  const { t } = useTranslation();
   const [range, setRange] = useState<TimeRange>("24h");
   const [activePollutant, setActivePollutant] = useState<"aqi" | "pm25" | "pm10" | "no2">("aqi");
   const [chartType, setChartType] = useState<"wave" | "bars">("wave");
@@ -256,7 +258,7 @@ export function HistoricalData({ currentAqi = 220, forecast, cityAggregate }: Hi
               lineHeight: 1.15,
             }}
           >
-            Historical Air Quality Trends &amp; Climatology
+            {t("historic.title")}
           </h2>
           <p
             className="section__lede"
@@ -268,7 +270,7 @@ export function HistoricalData({ currentAqi = 220, forecast, cityAggregate }: Hi
               margin: 0,
             }}
           >
-            Past 24-hour timeline, 7-day monitoring history, and diurnal atmospheric boundary layer cycles for Delhi-NCR monitoring stations.
+            {t("historic.subtitle")}
           </p>
         </div>
 
@@ -281,7 +283,7 @@ export function HistoricalData({ currentAqi = 220, forecast, cityAggregate }: Hi
               aria-pressed={range === "24h"}
               onClick={() => setRange("24h")}
             >
-              Past 24 Hours
+              24h
             </button>
             <button
               type="button"
@@ -289,7 +291,7 @@ export function HistoricalData({ currentAqi = 220, forecast, cityAggregate }: Hi
               aria-pressed={range === "7d"}
               onClick={() => setRange("7d")}
             >
-              Past 7 Days
+              7d
             </button>
             <button
               type="button"

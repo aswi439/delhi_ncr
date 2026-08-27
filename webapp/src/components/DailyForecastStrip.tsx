@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { aqiColor, aqiToCategory } from "@/lib/aqi";
 import type { CityAggregateResponse, ConsensusResponse, ForecastResponse, HourlyForecast } from "@/lib/types";
+import { useTranslation } from "@/i18n";
 
 interface DailyForecastStripProps {
   forecast?: ForecastResponse | null;
@@ -32,6 +33,7 @@ export function DailyForecastStrip({
   cityAggregate,
   onSelectDay,
 }: DailyForecastStripProps) {
+  const { t, language } = useTranslation();
   const [selectedDay, setSelectedDay] = useState<number>(0);
 
   const daysData = useMemo<DayForecastItem[]>(() => {
@@ -49,8 +51,9 @@ export function DailyForecastStrip({
     for (let i = 0; i < 7; i++) {
       const targetDate = new Date(baseDate.getTime() + i * 86400000);
       const isToday = i === 0;
-      const dayName = isToday ? "TODAY" : targetDate.toLocaleDateString("en-US", { weekday: "short" }).toUpperCase();
-      const dateStr = targetDate.toLocaleDateString("en-US", { day: "numeric", month: "short" });
+      const locale = language === "hi" ? "hi-IN" : language === "ta" ? "ta-IN" : "en-US";
+      const dayName = isToday ? t("dailyForecast.today") : targetDate.toLocaleDateString(locale, { weekday: "short" }).toUpperCase();
+      const dateStr = targetDate.toLocaleDateString(locale, { day: "numeric", month: "short" });
 
       let dayAqi: number;
       let dayPm25: number;
@@ -128,14 +131,27 @@ export function DailyForecastStrip({
     if (onSelectDay) onSelectDay(idx);
   };
 
+  const getCategoryLabel = (cat: string) => {
+    switch (cat.toLowerCase()) {
+      case "good": return t("hero.categories.good");
+      case "satisfactory": return t("hero.categories.satisfactory");
+      case "moderate": return t("hero.categories.moderate");
+      case "poor": return t("hero.categories.poor");
+      case "very poor": return t("hero.categories.veryPoor");
+      case "severe": return t("hero.categories.severe");
+      case "hazardous": return t("hero.categories.hazardous");
+      default: return cat;
+    }
+  };
+
   return (
     <div className="daily-strip-wrap" aria-label="7-Day Daily Predictable AQI Outlook">
       <div className="daily-strip-head">
         <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
           <span className="daily-pulse-dot" />
-          <span className="daily-strip-title">7-DAY DAILY PREDICTABLE AQI OUTLOOK</span>
+          <span className="daily-strip-title">{t("dailyForecast.title")}</span>
         </div>
-        <span className="daily-strip-sub">Deterministic Horizon Projection · Tap to Inspect</span>
+        <span className="daily-strip-sub">{t("dailyForecast.subtitle")}</span>
       </div>
 
       <div className="daily-strip-grid">
@@ -181,7 +197,7 @@ export function DailyForecastStrip({
 
                 {/* Category Label */}
                 <div className="daily-card-cat" style={{ color: d.color }}>
-                  {d.category}
+                  {getCategoryLabel(d.category)}
                 </div>
 
                 {/* Trend Symbol */}

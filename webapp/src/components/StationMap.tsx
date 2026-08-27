@@ -24,6 +24,7 @@ import type {
 } from "@/lib/types";
 import { classifyIndustryTier } from "@/lib/types";
 import { fetchDelhiIndustries } from "@/lib/supabase";
+import { useTranslation } from "@/i18n";
 
 // Leaflet's bundle is only fetched when the online renderer actually mounts —
 // offline mode never pays for it.
@@ -73,6 +74,7 @@ export function StationMap({
   cursor,
   cityAggregate,
 }: StationMapProps) {
+  const { t } = useTranslation();
   const online = useOnline();
   const reduced = useReducedMotion();
 
@@ -282,11 +284,11 @@ export function StationMap({
                     gap: "4px",
                   }}
                 >
-                  🏭 Industry Pollution Tier
+                  🏭 {t("map.industryPollutionTier")}
                 </span>
                 <span style={{ fontSize: "11px", color: "#475569" }}>•</span>
                 <span style={{ fontSize: "11px", color: "#94a3b8", fontWeight: 500 }}>
-                  Active: <strong style={{ color: "#f8fafc" }}>{filteredIndustries.length.toLocaleString()}</strong> of {industries.length.toLocaleString()} units
+                  {t("map.activeUnits")}: <strong style={{ color: "#f8fafc" }}>{filteredIndustries.length.toLocaleString()}</strong> {t("map.ofUnits")} {industries.length.toLocaleString()} {t("map.units")}
                 </span>
               </div>
 
@@ -303,7 +305,7 @@ export function StationMap({
                   }}
                   onClick={() => setIndustryTierFilter("all")}
                 >
-                  All Stages ({industries.length.toLocaleString()})
+                  {t("map.allTiers")} ({industries.length.toLocaleString()})
                 </button>
                 <button
                   type="button"
@@ -317,7 +319,7 @@ export function StationMap({
                   }}
                   onClick={() => setIndustryTierFilter("tier1")}
                 >
-                  🔴 Tier 1: High Emission ({tier1Count.toLocaleString()})
+                  🔴 {t("map.tier1")} ({tier1Count.toLocaleString()})
                 </button>
                 <button
                   type="button"
@@ -331,7 +333,7 @@ export function StationMap({
                   }}
                   onClick={() => setIndustryTierFilter("tier2")}
                 >
-                  🟠 Tier 2: Moderate ({tier2Count.toLocaleString()})
+                  🟠 {t("map.tier2")} ({tier2Count.toLocaleString()})
                 </button>
                 <button
                   type="button"
@@ -345,7 +347,7 @@ export function StationMap({
                   }}
                   onClick={() => setIndustryTierFilter("tier3")}
                 >
-                  🟢 Tier 3: Ancillary ({tier3Count.toLocaleString()})
+                  🟢 {t("map.tier3")} ({tier3Count.toLocaleString()})
                 </button>
               </div>
             </div>

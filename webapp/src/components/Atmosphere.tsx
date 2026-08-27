@@ -10,6 +10,7 @@ import type { Panel } from "@/hooks/useForecastData";
 import { aqiColor } from "@/lib/aqi";
 import { int, leadLabel } from "@/lib/format";
 import type { ForecastResponse, HourlyForecast } from "@/lib/types";
+import { useTranslation } from "@/i18n";
 
 // ── Geometry (viewBox units) ──────────────────────────────────────────────────
 const W = 1200;
@@ -53,6 +54,7 @@ interface AtmosphereProps {
 }
 
 export function Atmosphere({ forecast, hour, cursor }: AtmosphereProps) {
+  const { t } = useTranslation();
   const svgRef = useRef<SVGSVGElement>(null);
   const hours = forecast.data?.forecast_hours ?? [];
   const n = hours.length;
@@ -251,13 +253,10 @@ export function Atmosphere({ forecast, hour, cursor }: AtmosphereProps) {
         <div>
           <p className="eyebrow">the signal</p>
           <h2 className="section__h" id="atmos-h">
-            The layer the air is trapped in
+            {t("atmosphere.title")}
           </h2>
           <p className="section__lede">
-            Delhi's pollution is a volume problem before it is an emissions problem. The same source
-            strength gives twice the concentration in a mixed layer half as deep. Below, the shaded
-            body <em>is</em> that layer across 72 hours — and the hatched sliver above it is the depth
-            the aerosol removed by shading the ground. That sliver is the coupling.
+            {t("atmosphere.subtitle")}
           </p>
         </div>
 
