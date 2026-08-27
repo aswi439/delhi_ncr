@@ -6,11 +6,10 @@
  * - Hindi (hi / hi-IN)
  * - Tamil (ta / ta-IN)
  * 
- * Architecture:
- * 1. Uses the backend proxy (/api/v1/health/tts) for authentic native Tamil & Hindi pronunciation
- *    with 0 CORS, 0 403 errors, and 0 missing language pack issues on Windows/Edge/Chrome.
- * 2. Seamlessly queues sentence audio chunks with HTML5 Audio for smooth, natural playback.
- * 3. Falls back to SpeechSynthesis if offline.
+ * Key Fixes:
+ * 1. Preloads voices via onvoiceschanged so cloud neural voices (Microsoft Swara/Pallavi, Google Hindi/Tamil) are ready.
+ * 2. Strictly NEVER assigns an English voice to Hindi or Tamil utterances.
+ * 3. Chunks long texts by sentence and calls window.speechSynthesis.resume() to prevent Chromium audio stalls.
  */
 
 export function cleanMarkdownForSpeech(text: string): string {
@@ -31,19 +30,19 @@ export function cleanMarkdownForSpeech(text: string): string {
     // Remove bullets and numbered lists
     .replace(/^[\*\-•]\s+/gm, "")
     .replace(/^\d+\.\s+/gm, "")
-    // Remove emojis and UI icons that cause speech artifacts
-    .replace(/[🟢🟡🟠🔴🟣🟤🚨🔬🌫️📊🌡️🌙🏢🛡️🌀🏏🍵🩺💡🌐⏰📅👋🧮😄⚠️]/gu, "")
-    // Collapse spacing
+    // Remove emojis and UI symbols that cause speech artifacts
+    .replace(/[🟢🟡🟠🔴🟣🟤🚨🔬🌫️📊🌡️🌙🏢🛡️🌀🏏🍵🩺💡🌐⏰📅👋🧮😄⚠️❌✅🔊🎤]/gu, "")
+    // Collapse newlines into sentence pauses
     .replace(/\n+/g, ". ")
     .replace(/\s{2,}/g, " ")
     .trim();
 }
 
 /**
- * Splits text into natural sentence chunks (under 140 characters)
- * for high-speed streaming audio playback.
+ * Splits text into natural sentence chunks for reliable Chromium speech playback.
  */
-function splitIntoAudioChunks(text: string, maxLen: number = 130): string[] {
+function splitIntoSentenceChunks(text: string, maxLen: number = 200): string[] {
+  // Split on punctuation: . ? ! । (Hindi danda) \n
   const rawSegments = text
     .replace(/([.?!।\n]+)/g, "$1|")
     .split("|")
@@ -82,11 +81,58 @@ function splitIntoAudioChunks(text: string, maxLen: number = 130): string[] {
   return chunks;
 }
 
-let activeAudio: HTMLAudioElement | null = null;
-let isAudioPlaying = false;
+// Pre-warm voices
+let cachedVoices: SpeechSynthesisVoice[] = [];
+function loadVoices() {
+  if (typeof window !== "undefined" && "speechSynthesis" in window) {
+    cachedVoices = window.speechSynthesis.getVoices();
+  }
+}
+
+if (typeof window !== "undefined" && "speechSynthesis" in window) {
+  loadVoices();
+  if (window.speechSynthesis.onvoiceschanged !== undefined) {
+    window.speechSynthesis.onvoiceschanged = loadVoices;
+  }
+}
+
+function findBestVoice(langCode: string): SpeechSynthesisVoice | null {
+  const voices = cachedVoices.length > 0 ? cachedVoices : (typeof window !== "undefined" && "speechSynthesis" in window ? window.speechSynthesis.getVoices() : []);
+  if (!voices || voices.length === 0) return null;
+
+  const code = langCode.toLowerCase();
+
+  if (code === "ta") {
+    // Tamil voices (e.g., Microsoft Pallavi, Microsoft Valluvar, Google தமிழ், ta-IN)
+    return (
+      voices.find((v) => v.lang.toLowerCase().startsWith("ta") && (v.name.includes("Online") || v.name.includes("Natural") || v.name.includes("Google"))) ||
+      voices.find((v) => v.lang.toLowerCase().startsWith("ta") || v.lang.toLowerCase().includes("ta-in") || v.name.toLowerCase().includes("tamil")) ||
+      null
+    );
+  }
+
+  if (code === "hi") {
+    // Hindi voices (e.g., Microsoft Swara, Microsoft Madhur, Google हिन्दी, hi-IN)
+    return (
+      voices.find((v) => v.lang.toLowerCase().startsWith("hi") && (v.name.includes("Online") || v.name.includes("Natural") || v.name.includes("Google"))) ||
+      voices.find((v) => v.lang.toLowerCase().startsWith("hi") || v.lang.toLowerCase().includes("hi-in") || v.name.toLowerCase().includes("hindi")) ||
+      null
+    );
+  }
+
+  // English voices (Prefer Indian English or Natural English)
+  return (
+    voices.find((v) => v.lang.toLowerCase() === "en-in" && (v.name.includes("Online") || v.name.includes("Natural") || v.name.includes("Google"))) ||
+    voices.find((v) => v.lang.toLowerCase().startsWith("en") && (v.name.includes("Natural") || v.name.includes("Google") || v.name.includes("Jenny") || v.name.includes("Microsoft"))) ||
+    voices.find((v) => v.lang.toLowerCase().startsWith("en")) ||
+    null
+  );
+}
+
+let isSpeakingActive = false;
 
 /**
- * Plays speech for English, Hindi, or Tamil text.
+ * Plays speech for English, Hindi, or Tamil text with authentic native voices.
  * Returns an abort/stop function.
  */
 export function playMultilingualSpeech(
@@ -98,6 +144,11 @@ export function playMultilingualSpeech(
 ): () => void {
   stopAllSpeech();
 
+  if (typeof window === "undefined" || !("speechSynthesis" in window)) {
+    if (onError) onError();
+    return () => {};
+  }
+
   const cleaned = cleanMarkdownForSpeech(rawText);
   if (!cleaned) {
     if (onEnd) onEnd();
@@ -105,132 +156,87 @@ export function playMultilingualSpeech(
   }
 
   const langCode = language === "hi" ? "hi" : language === "ta" ? "ta" : "en";
-  let cancelled = false;
+  const targetLocale = language === "hi" ? "hi-IN" : language === "ta" ? "ta-IN" : "en-IN";
 
-  // 1. For English: If browser has high-quality English voice, use SpeechSynthesis
-  if (langCode === "en" && typeof window !== "undefined" && "speechSynthesis" in window) {
-    const voices = window.speechSynthesis.getVoices();
-    const englishVoice =
-      voices.find(
-        (v) =>
-          v.lang.startsWith("en") &&
-          (v.name.includes("Natural") ||
-            v.name.includes("Google") ||
-            v.name.includes("Samantha") ||
-            v.name.includes("Jenny") ||
-            v.name.includes("Microsoft"))
-      ) || voices.find((v) => v.lang.startsWith("en"));
-
-    if (englishVoice) {
-      const utterance = new SpeechSynthesisUtterance(cleaned);
-      utterance.voice = englishVoice;
-      utterance.lang = "en-US";
-      utterance.rate = 1.0;
-      utterance.pitch = 1.0;
-
-      utterance.onstart = () => {
-        if (!cancelled && onStart) onStart();
-      };
-      utterance.onend = () => {
-        if (!cancelled && onEnd) onEnd();
-      };
-      utterance.onerror = () => {
-        if (!cancelled && onError) onError();
-      };
-
-      window.speechSynthesis.speak(utterance);
-
-      return () => {
-        cancelled = true;
-        if (typeof window !== "undefined" && "speechSynthesis" in window) {
-          window.speechSynthesis.cancel();
-        }
-      };
-    }
-  }
-
-  // 2. High-Fidelity Audio via Backend Proxy (/api/v1/health/tts) for Tamil and Hindi
-  const chunks = splitIntoAudioChunks(cleaned, 130);
+  const chunks = splitIntoSentenceChunks(cleaned, 180);
   if (chunks.length === 0) {
     if (onEnd) onEnd();
     return () => {};
   }
 
-  let currentChunkIndex = 0;
-  isAudioPlaying = true;
-  if (onStart) onStart();
+  let cancelled = false;
+  isSpeakingActive = true;
+  let chunkIndex = 0;
 
-  const playNextChunk = () => {
-    if (cancelled || !isAudioPlaying) {
+  const targetVoice = findBestVoice(langCode);
+
+  const speakNext = () => {
+    if (cancelled || !isSpeakingActive) {
       if (onEnd) onEnd();
       return;
     }
 
-    if (currentChunkIndex >= chunks.length) {
-      isAudioPlaying = false;
+    if (chunkIndex >= chunks.length) {
+      isSpeakingActive = false;
       if (onEnd) onEnd();
       return;
     }
 
-    const chunkText = chunks[currentChunkIndex];
-    currentChunkIndex++;
+    const currentText = chunks[chunkIndex];
+    chunkIndex++;
 
-    // Use backend proxy to avoid any CORS/403 blocks in client browsers
-    const primaryUrl = `/api/v1/health/tts?text=${encodeURIComponent(chunkText)}&lang=${langCode}`;
-    const fallbackUrl = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(chunkText)}&tl=${langCode}&client=tw-ob`;
+    try {
+      window.speechSynthesis.resume();
+    } catch {
+      // ignore
+    }
 
-    const audio = new Audio(primaryUrl);
-    activeAudio = audio;
+    const utterance = new SpeechSynthesisUtterance(currentText);
+    utterance.lang = targetLocale;
+    utterance.rate = 0.95; // Slightly measured rate for crystal-clear clarity
+    utterance.pitch = 1.0;
 
-    audio.onended = () => {
-      playNextChunk();
+    // CRITICAL: Only set voice if it matches the target language!
+    // Never allow an English voice on Tamil or Hindi text!
+    if (targetVoice) {
+      utterance.voice = targetVoice;
+    }
+
+    utterance.onstart = () => {
+      if (chunkIndex === 1 && onStart) {
+        onStart();
+      }
     };
 
-    audio.onerror = () => {
-      // If backend proxy had cold start, retry with direct fallback or next chunk
-      const fallbackAudio = new Audio(fallbackUrl);
-      activeAudio = fallbackAudio;
-
-      fallbackAudio.onended = () => {
-        playNextChunk();
-      };
-
-      fallbackAudio.onerror = () => {
-        playNextChunk();
-      };
-
-      fallbackAudio.play().catch(() => {
-        playNextChunk();
-      });
+    utterance.onend = () => {
+      speakNext();
     };
 
-    audio.play().catch(() => {
-      // In case autoplay was prevented or interrupted
-      audio.onerror?.(new Event("error"));
-    });
+    utterance.onerror = (e) => {
+      console.warn("[Speech] Utterance error:", e);
+      if (chunkIndex < chunks.length) {
+        speakNext();
+      } else {
+        isSpeakingActive = false;
+        if (onEnd) onEnd();
+      }
+    };
+
+    window.speechSynthesis.speak(utterance);
   };
 
-  playNextChunk();
+  speakNext();
 
   return () => {
     cancelled = true;
-    isAudioPlaying = false;
+    isSpeakingActive = false;
     stopAllSpeech();
     if (onEnd) onEnd();
   };
 }
 
 export function stopAllSpeech() {
-  isAudioPlaying = false;
-  if (activeAudio) {
-    try {
-      activeAudio.pause();
-      activeAudio.currentTime = 0;
-    } catch {
-      // ignore
-    }
-    activeAudio = null;
-  }
+  isSpeakingActive = false;
   if (typeof window !== "undefined" && "speechSynthesis" in window) {
     try {
       window.speechSynthesis.cancel();
