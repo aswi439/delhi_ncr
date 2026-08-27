@@ -203,37 +203,7 @@ kbd {
   white-space: nowrap;
 }
 
-/* ══ sample banner ════════════════════════════════════════════════════════ */
 
-.banner {
-  position: relative;
-  z-index: 30;
-  border-bottom: 1px solid color-mix(in srgb, var(--aqi-3) 26%, transparent);
-  background: color-mix(in srgb, var(--aqi-3) 9%, var(--abyss));
-}
-.banner__inner {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 0.9rem;
-  padding: 0.7rem var(--pad);
-}
-.banner__tag {
-  font: 600 10px/1 var(--mono);
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-  color: var(--abyss);
-  background: var(--aqi-3);
-  padding: 5px 7px;
-  border-radius: 2px;
-}
-.banner__text { font-size: 13px; color: var(--mist); flex: 1 1 22rem; }
-.banner__scenarios { display: flex; gap: 0.5rem; }
-.banner__scenarios .btn[aria-pressed="true"] {
-  color: var(--abyss);
-  background: var(--aqi-3);
-  border-color: var(--aqi-3);
-}
 
 /* ══ hero ═════════════════════════════════════════════════════════════════ */
 

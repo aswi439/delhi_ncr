@@ -182,11 +182,9 @@ export function Rail({
                 { id: "atmospheric-dynamics", label: "Atmosphere", icon: CloudRain },
                 { id: "exposure-tracker", label: "Exposure", icon: HeartPulse },
                 { id: "health-assistant", label: "Health Assistant", icon: Bot },
-                { id: "alerts", label: "Alerts", icon: Bell, badge: unreadAlertsCount },
               ].map((btn) => {
                 const isActive = currentPage === btn.id;
                 const Icon = btn.icon;
-                const badgeCount = (btn as any).badge;
                 return (
                   <button
                     key={btn.id}
@@ -211,7 +209,6 @@ export function Rail({
                       transition: "all 0.2s cubic-bezier(0.16, 1, 0.3, 1)",
                       whiteSpace: "nowrap",
                       outline: "none",
-                      position: "relative",
                     }}
                     onMouseEnter={(e) => {
                       if (!isActive) {
@@ -229,28 +226,11 @@ export function Rail({
                     <Icon
                       size={12.5}
                       style={{
-                        color: isActive ? "var(--live)" : btn.id === "alerts" && unreadAlertsCount > 0 ? "#c084fc" : "rgba(255, 255, 255, 0.6)",
+                        color: isActive ? "var(--live)" : "rgba(255, 255, 255, 0.6)",
                         transition: "color 0.25s ease",
                       }}
                     />
                     <span>{btn.label}</span>
-                    {badgeCount !== undefined && badgeCount > 0 && (
-                      <span
-                        className={hasCriticalAlert ? "alert-bell-pulse" : ""}
-                        style={{
-                          marginLeft: "2px",
-                          padding: "1px 5px",
-                          borderRadius: "9999px",
-                          background: hasCriticalAlert ? "#ef4444" : "#a855f7",
-                          color: "#FFFFFF",
-                          fontSize: "9px",
-                          fontWeight: 700,
-                          lineHeight: 1,
-                        }}
-                      >
-                        {badgeCount > 9 ? "9+" : badgeCount}
-                      </span>
-                    )}
                   </button>
                 );
               })}

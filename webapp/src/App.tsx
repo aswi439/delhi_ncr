@@ -6,7 +6,6 @@ import { SourceApportionment } from "@/components/SourceApportionment";
 import { HazeField } from "@/components/HazeField";
 import { Hero } from "@/components/Hero";
 import { Rail, type PageType } from "@/components/Rail";
-import { SampleBanner } from "@/components/SampleBanner";
 import { StationMap } from "@/components/StationMap";
 import { Stations } from "@/components/Stations";
 import { ForecastDataPage } from "@/components/ForecastDataPage";
@@ -231,7 +230,6 @@ export default function App() {
         unreadAlertsCount={unreadAlertsCount}
         hasCriticalAlert={hasCriticalAlert}
       />
-      <SampleBanner sample={data.sample} onScenario={data.setScenario} />
 
       {currentPage === "forecast-datas" ? (
         <ForecastDataPage
