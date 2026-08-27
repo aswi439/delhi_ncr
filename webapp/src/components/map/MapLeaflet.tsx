@@ -23,6 +23,7 @@ import {
   type MapStyle,
 } from "@/lib/mapgeo";
 import type { IndustryRecord, PlumeVectorsResponse, StationReading } from "@/lib/types";
+import { classifyIndustryTier } from "@/lib/types";
 
 /**
  * Online renderer — a real interactive Leaflet map on keyless raster tiles.
@@ -199,36 +200,78 @@ export default function MapLeaflet({
           ))
         : null}
 
-      {/* Delhi-Only Industrial Facilities & Power Stations */}
+      {/* Delhi-Only Industrial Facilities & Power Stations with 3-Stage Pollution Tiers */}
       {layers.industries && industries.length > 0
         ? industries.map((ind, i) => {
-            const isAnchor = ind.category === "power" || ind.name.toLowerCase().includes("power") || ind.name.toLowerCase().includes("waste to energy") || ind.name.toLowerCase().includes("wte");
-            const r = isAnchor ? 6.5 : 4.2;
-            const fillColor = isAnchor ? "#f59e0b" : "#a855f7";
-            const strokeColor = isAnchor ? "#ffffff" : "#6b21a8";
+            const tierInfo = classifyIndustryTier(ind);
+            const isAnchor = tierInfo.tier === 1 && (ind.category === "power" || ind.name.toLowerCase().includes("power") || ind.name.toLowerCase().includes("waste to energy") || ind.name.toLowerCase().includes("wte"));
+            
+            const radius = isAnchor ? 7 : tierInfo.tier === 1 ? 5 : tierInfo.tier === 2 ? 4.2 : 3.6;
+            const strokeColor = isAnchor ? "#ffffff" : tierInfo.tier === 1 ? "#7f1d1d" : tierInfo.tier === 2 ? "#7c2d12" : "#581c87";
 
             return (
               <CircleMarker
                 key={ind.id ? `ind-${ind.id}` : `ind-${i}`}
                 center={[ind.latitude, ind.longitude]}
-                radius={r}
+                radius={radius}
                 pane="ncrIndustries"
                 pathOptions={{
                   color: strokeColor,
                   weight: isAnchor ? 2 : 1,
-                  fillColor: fillColor,
-                  fillOpacity: 0.95,
+                  fillColor: tierInfo.color,
+                  fillOpacity: tierInfo.tier === 1 ? 0.95 : 0.85,
                 }}
               >
-                <Tooltip direction="top" offset={[0, -5]}>
-                  <div style={{ padding: "3px 5px", fontSize: "11px", lineHeight: "1.4" }}>
-                    <strong style={{ color: isAnchor ? "#fbbf24" : "#c084fc", display: "block" }}>
+                <Tooltip direction="top" offset={[0, -6]}>
+                  <div
+                    style={{
+                      padding: "6px 9px",
+                      fontSize: "11px",
+                      lineHeight: "1.45",
+                      maxWidth: "240px",
+                      background: "rgba(15, 23, 42, 0.95)",
+                      borderRadius: "6px",
+                      border: `1px solid ${tierInfo.color}66`,
+                      boxShadow: "0 8px 24px rgba(0,0,0,0.5)",
+                    }}
+                  >
+                    {/* Header: Tier Badge */}
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "4px" }}>
+                      <span
+                        style={{
+                          fontSize: "9.5px",
+                          fontWeight: 700,
+                          letterSpacing: "0.05em",
+                          padding: "2px 5px",
+                          borderRadius: "4px",
+                          background: `${tierInfo.color}25`,
+                          color: tierInfo.color,
+                          border: `1px solid ${tierInfo.color}50`,
+                        }}
+                      >
+                        {tierInfo.badge}
+                      </span>
+                    </div>
+
+                    {/* Facility Name */}
+                    <strong style={{ color: "#f8fafc", fontSize: "12px", display: "block", marginBottom: "2px" }}>
                       {isAnchor ? "⚡ " : "🏭 "}{ind.name}
                     </strong>
-                    <span style={{ color: "#94a3b8", display: "block" }}>{ind.sector || ind.category || "Industrial Source"}</span>
-                    <span style={{ color: "#38bdf8", fontSize: "10px", display: "block" }}>
+
+                    {/* Sector & Category */}
+                    <div style={{ color: "#cbd5e1", fontSize: "11px", marginBottom: "4px" }}>
+                      <strong>Sector:</strong> {ind.sector || ind.category || "Industrial Source"}
+                    </div>
+
+                    {/* Key Pollutants */}
+                    <div style={{ fontSize: "10px", color: "#fca5a5", marginBottom: "4px", background: "rgba(0,0,0,0.3)", padding: "2px 4px", borderRadius: "3px" }}>
+                      <strong>Key Pollutants:</strong> {tierInfo.pollutants}
+                    </div>
+
+                    {/* Location */}
+                    <div style={{ color: "#38bdf8", fontSize: "10px" }}>
                       📍 {ind.city}, {ind.state} {ind.address ? `• ${ind.address.split(",")[0]}` : ""}
-                    </span>
+                    </div>
                   </div>
                 </Tooltip>
               </CircleMarker>

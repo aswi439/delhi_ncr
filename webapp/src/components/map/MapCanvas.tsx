@@ -11,6 +11,7 @@ import {
   type MapStyleId,
 } from "@/lib/mapgeo";
 import type { IndustryRecord, PlumeVectorsResponse, StationReading } from "@/lib/types";
+import { classifyIndustryTier } from "@/lib/types";
 
 /**
  * Offline renderer — a self-contained Canvas schematic used when the browser is
@@ -260,23 +261,27 @@ export function MapCanvas({
       }
       ptsRef.current = pts;
 
-      // ── Delhi-Only Industrial Facilities (purple nodes) ────────────────
+      // ── Delhi-Only Industrial Facilities (3-Stage Pollution Tiers) ────
       if (layers.industries && industries && industries.length > 0) {
         for (const ind of industries) {
           const ix = X(ind.longitude);
           const iy = Y(ind.latitude);
-          // Soft purple factory glow
-          ctx.fillStyle = "rgba(168, 85, 247, 0.3)";
-          ctx.beginPath();
-          ctx.arc(ix, iy, 7, 0, Math.PI * 2);
-          ctx.fill();
+          const tierInfo = classifyIndustryTier(ind);
+
+          // Soft ambient glow for Tier 1
+          if (tierInfo.tier === 1) {
+            ctx.fillStyle = `${tierInfo.color}40`;
+            ctx.beginPath();
+            ctx.arc(ix, iy, 7, 0, Math.PI * 2);
+            ctx.fill();
+          }
 
           // Factory marker
-          ctx.fillStyle = "#9333ea";
-          ctx.strokeStyle = "#ffffff";
-          ctx.lineWidth = 1.2;
+          ctx.fillStyle = tierInfo.color;
+          ctx.strokeStyle = tierInfo.tier === 1 ? "#ffffff" : "rgba(255,255,255,0.7)";
+          ctx.lineWidth = 1;
           ctx.beginPath();
-          ctx.arc(ix, iy, 3.5, 0, Math.PI * 2);
+          ctx.arc(ix, iy, tierInfo.tier === 1 ? 4 : 3, 0, Math.PI * 2);
           ctx.fill();
           ctx.stroke();
         }

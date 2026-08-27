@@ -378,6 +378,7 @@ export interface IndustryRecord {
   status?: string | null;
   capacity?: string | number | null;
   address?: string | null;
+  tier?: 1 | 2 | 3;
 }
 
 export interface IndustryResponse {
@@ -387,3 +388,98 @@ export interface IndustryResponse {
   source: string;
   records: IndustryRecord[];
 }
+
+export type IndustryTierFilter = "all" | "tier1" | "tier2" | "tier3";
+
+export interface IndustryTierInfo {
+  tier: 1 | 2 | 3;
+  label: string;
+  badge: string;
+  categoryName: string;
+  color: string;
+  pollutants: string;
+  desc: string;
+}
+
+export function classifyIndustryTier(ind: IndustryRecord): IndustryTierInfo {
+  const cat = (ind.category || "").toLowerCase();
+  const name = (ind.name || "").toLowerCase();
+  const sector = (ind.sector || "").toLowerCase();
+
+  // Tier 1: Heavy Direct Polluters (CPCB Red Category)
+  if (
+    cat === "power" ||
+    cat === "metal" ||
+    cat === "chemical" ||
+    cat === "plastic" ||
+    cat === "electroplating" ||
+    name.includes("power") ||
+    name.includes("waste to energy") ||
+    name.includes("wte") ||
+    name.includes("smelt") ||
+    name.includes("foundry") ||
+    name.includes("pyrolysis") ||
+    name.includes("rolling") ||
+    name.includes("electroplat") ||
+    name.includes("acid") ||
+    sector.includes("steel") ||
+    sector.includes("smelt") ||
+    sector.includes("polymer") ||
+    sector.includes("chemical") ||
+    sector.includes("electroplat")
+  ) {
+    const isPower = cat === "power" || name.includes("power") || name.includes("waste to energy") || name.includes("wte");
+    return {
+      tier: 1,
+      label: "Tier 1: High Emission",
+      badge: "🔴 TIER 1 · HIGH EMISSION (RED)",
+      categoryName: isPower ? "Power & Waste-to-Energy" : "Heavy Combustion / Chemical",
+      color: isPower ? "#f59e0b" : "#ef4444",
+      pollutants: "PM2.5, SO2, NOx, Toxic VOCs, Heavy Metals",
+      desc: "Continuous high-temperature combustion, boiler stacks, plastic pyrolysis & toxic fumes.",
+    };
+  }
+
+  // Tier 2: Moderate & Fugitive Polluters (CPCB Orange Category)
+  if (
+    cat === "building_materials" ||
+    cat === "textile" ||
+    cat === "food" ||
+    cat === "wood" ||
+    cat === "waste_recycling" ||
+    name.includes("concrete") ||
+    name.includes("rmc") ||
+    name.includes("stone") ||
+    name.includes("dyeing") ||
+    name.includes("boiler") ||
+    name.includes("sawmill") ||
+    name.includes("e-waste") ||
+    name.includes("crush") ||
+    sector.includes("concrete") ||
+    sector.includes("dyeing") ||
+    sector.includes("flour") ||
+    sector.includes("timber")
+  ) {
+    return {
+      tier: 2,
+      label: "Tier 2: Moderate / Fugitive",
+      badge: "🟠 TIER 2 · MODERATE (ORANGE)",
+      categoryName: "Fugitive Dust / Process Boiler",
+      color: "#f97316",
+      pollutants: "PM10, Mineral Dust, Boiler Smoke, Solvents",
+      desc: "Ready-mix batching, stone cutting, boiler steam drying & solvent vaporization.",
+    };
+  }
+
+  // Tier 3: Low Direct / Ancillary (CPCB Green & White Category)
+  return {
+    tier: 3,
+    label: "Tier 3: Ancillary & Logistics",
+    badge: "🟢 TIER 3 · ANCILLARY (GREEN)",
+    categoryName: "Assembly & Secondary Hub",
+    color: "#a855f7",
+    pollutants: "DG Set NOx, Heavy Fleet Diesel PM",
+    desc: "Minimal direct stack emission; pollutes via backup diesel generators and truck fleets.",
+  };
+}
+
