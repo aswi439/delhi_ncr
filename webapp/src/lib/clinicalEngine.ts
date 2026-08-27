@@ -2,8 +2,9 @@
  * Delhi NCR Comprehensive Conversational, Environmental & Clinical AI Engine
  * 
  * Generates natural, context-aware, insightful, and friendly answers for ANY
- * user prompt—including general knowledge, dates, atmospheric science (PM2.5, PM10, AQI),
- * sports/fitness, clinical health, diet remedies, and outside-the-box questions.
+ * user prompt—including project-specific queries, general knowledge, math,
+ * atmospheric science (PM2.5, PM10, AQI, Inversion), sports/fitness, clinical health,
+ * diet remedies, and outside-the-box questions.
  * 
  * Supports English, Hindi (हिन्दी), and Tamil (தமிழ்).
  */
@@ -49,37 +50,135 @@ export function generateClinicalResponse(
   const formattedDateEn = now.toLocaleDateString("en-IN", dateOptions);
   const formattedTimeEn = now.toLocaleTimeString("en-IN", timeOptions);
 
+  // Helper for safe Math evaluation
+  const mathMatch = q.match(/^(\d+(?:\.\d+)?)\s*([\+\-\*\/])\s*(\d+(?:\.\d+)?)$/);
+  if (mathMatch) {
+    const num1 = parseFloat(mathMatch[1]);
+    const op = mathMatch[2];
+    const num2 = parseFloat(mathMatch[3]);
+    let result = 0;
+    if (op === "+") result = num1 + num2;
+    else if (op === "-") result = num1 - num2;
+    else if (op === "*") result = num1 * num2;
+    else if (op === "/" && num2 !== 0) result = num1 / num2;
+
+    return {
+      modelUsed: "Clinical Intelligence Specialist (Delhi Air Brain)",
+      source: "expert-rules",
+      content: `🧮 **Calculation Result:**\n\n**${num1} ${op} ${num2} = ${result}**`,
+    };
+  }
+
   // ──────────────────────────────────────────────────────────────────────────
-  // 1. DATE, TIME, IDENTITY & GENERAL CHIT-CHAT
+  // 1. WEBSITE & PROJECT-SPECIFIC QUESTIONS
+  // ──────────────────────────────────────────────────────────────────────────
+  if (
+    q.includes("about this project") ||
+    q.includes("about this website") ||
+    q.includes("what is this project") ||
+    q.includes("what is this website") ||
+    q.includes("explain this website") ||
+    q.includes("what does this app do") ||
+    q.includes("features of this website") ||
+    q.includes("project overview") ||
+    q.includes("ncr-72") ||
+    q.includes("यह वेबसाइट क्या है") ||
+    q.includes("இந்த இணையதளம் என்ன")
+  ) {
+    return {
+      modelUsed: "Clinical Intelligence Specialist (Delhi Air Brain)",
+      source: "expert-rules",
+      content: `### 🌐 About the NCR·72 Delhi-NCR Air Quality Platform
+
+**NCR·72** is a coupled meteorology–chemistry environmental intelligence platform built for the National Capital Region (Delhi, Noida, Gurugram, Ghaziabad, Faridabad):
+
+**Core System Capabilities:**
+1. **72-Hour Coupled AQI Forecast:** Uses two-way coupled WRF-Chem numerical simulation to predict air quality trends, diurnal inversion caps, and boundary layer ventilation up to 3 days ahead.
+2. **Thermal Inversion & PBL Tracking:** Monitors real-time Planetary Boundary Layer (PBL) mixing heights and surface temperature lapse rates ($\Delta T$) that trap winter smog.
+3. **5,000+ Industrial Units GIS Registry:** Maps industrial emission clusters across Wazirpur, Okhla, Bawana, Mayapuri, Anand Vihar, and Greater Noida with operational stack statuses.
+4. **Stubble Burning & Fire Dispersion:** Tracks NASA VIIRS/MODIS satellite farm fire detections across Punjab and Haryana and models plume trajectory into the Delhi basin.
+5. **Multi-Channel Alert System:** Real-time push notifications and thresholds for CPCB GRAP (Graded Response Action Plan) Stages 1 through 4.
+6. **Clinical Pulmonary AI Assistant:** Provides personalized, evidence-based respiratory protection, medication triage, mask comparisons, and workout scheduling in **English, Hindi, and Tamil**.`,
+    };
+  }
+
+  if (
+    q.includes("grap") ||
+    q.includes("graded response") ||
+    q.includes("grap stage") ||
+    q.includes("grap 4") ||
+    q.includes("grap 3") ||
+    q.includes("ग्रेप")
+  ) {
+    return {
+      modelUsed: "Clinical Intelligence Specialist (Delhi Air Brain)",
+      source: "expert-rules",
+      content: `### 🚨 CPCB Graded Response Action Plan (GRAP) Stages Explained
+
+**GRAP** is the statutory emergency framework enforced by the Commission for Air Quality Management (CAQM) in Delhi-NCR:
+
+- 🟡 **GRAP Stage 1 (AQI 201–300 · 'Poor'):** Periodic mechanized sweeping, water sprinkling on roads, strict dust enforcement at construction sites > 500 sqm.
+- 🟠 **GRAP Stage 2 (AQI 301–400 · 'Very Poor') — *[Current Level: ${aqi}]*:** Daily water sprinkling, enhanced parking fees to discourage private vehicles, uninterrupted power supply to ban diesel generator sets.
+- 🔴 **GRAP Stage 3 (AQI 401–450 · 'Severe'):** Strict ban on non-essential construction and demolition, ban on BS-III petrol and BS-IV diesel 4-wheelers in Delhi and surrounding districts, primary school transition to hybrid mode.
+- 🟤 **GRAP Stage 4 (AQI > 450 · 'Severe+'):** Complete ban on entry of non-electric/non-CNG/non-BS-VI trucks into Delhi, closure of schools up to Class 11, suspension of all linear public construction projects (highways, flyovers), and 50% work-from-home mandate for offices.`,
+    };
+  }
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // 2. GENERAL KNOWLEDGE & TRIVIA
+  // ──────────────────────────────────────────────────────────────────────────
+  if (
+    q.includes("capital of india") ||
+    q.includes("भारत की राजधानी") ||
+    q.includes("இந்தியாவின் தலைநகரம்")
+  ) {
+    return {
+      modelUsed: "Clinical Intelligence Specialist (Delhi Air Brain)",
+      source: "expert-rules",
+      content: `🇮🇳 **Capital of India:** **New Delhi**\n\nNew Delhi is the seat of all three branches of the Government of India (Rashtrapati Bhavan, Parliament, Supreme Court). Today's live AQI across Central Delhi is **${aqi} (${aqiCat})**.`,
+    };
+  }
+
+  if (
+    q.includes("photosynthesis") ||
+    q.includes("प्रकाश संश्लेषण")
+  ) {
+    return {
+      modelUsed: "Clinical Intelligence Specialist (Delhi Air Brain)",
+      source: "expert-rules",
+      content: `🌱 **What is Photosynthesis?**\n\nPhotosynthesis is the biological process by which green plants and certain organisms convert sunlight, carbon dioxide ($CO_2$), and water ($H_2O$) into chemical energy (glucose) and release oxygen ($O_2$):\n\n$$\\text{6CO}_2 + \\text{6H}_2\\text{O} + \\text{Sunlight} \\rightarrow \\text{C}_6\\text{H}_{12}\\text{O}_6 + \\text{6O}_2$$\n\n*Note:* Severe particulate smog in Delhi coats plant foliage, reducing photosynthetic efficiency by up to 25%–35% during winter months.`,
+    };
+  }
+
+  if (
+    q.includes("joke") ||
+    q.includes("funny") ||
+    q.includes("chutkula") ||
+    q.includes("मजाक") ||
+    q.includes("जोक")
+  ) {
+    return {
+      modelUsed: "Clinical Intelligence Specialist (Delhi Air Brain)",
+      source: "expert-rules",
+      content: `😄 **Delhi Air Reality Check:**\n\n*A doctor in Delhi told his patient: "You need to stop spending money on cigarettes. Just open your window in the morning, take 5 deep breaths, and you've smoked half a pack for free!"* 😅\n\nJokes aside, with today's **AQI at ${aqi} (${aqiCat})**, please wear a certified N95 respirator whenever stepping outside!`,
+    };
+  }
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // 3. DATE, TIME & GREETINGS
   // ──────────────────────────────────────────────────────────────────────────
   if (
     q.includes("date") ||
-    q.includes("what date") ||
     q.includes("today date") ||
     q.includes("current date") ||
     q.includes("तारीख") ||
     q.includes("आज कौन सा दिन") ||
-    q.includes("தேதி") ||
-    q.includes("நாள்")
+    q.includes("தேதி")
   ) {
-    if (lang === "hi") {
-      return {
-        modelUsed: "Clinical Intelligence Specialist (Delhi Air Brain)",
-        source: "expert-rules",
-        content: `📅 **आज की तारीख और समय:**\n\n- **तारीख:** ${now.toLocaleDateString("hi-IN", dateOptions)}\n- **समय:** ${now.toLocaleTimeString("hi-IN", timeOptions)}\n- **दिल्ली का लाइव AQI:** **${aqi}** (${aqiCat})\n\nक्या आप आज के प्रदूषण स्तर, सुरक्षित व्यायाम समय या किसी स्वास्थ्य लक्षण के बारे में कुछ जानना चाहते हैं?`,
-      };
-    }
-    if (lang === "ta") {
-      return {
-        modelUsed: "Clinical Intelligence Specialist (Delhi Air Brain)",
-        source: "expert-rules",
-        content: `📅 **இன்றைய தேதி மற்றும் நேரம்:**\n\n- **தேதி:** ${now.toLocaleDateString("ta-IN", dateOptions)}\n- **நேரம்:** ${now.toLocaleTimeString("ta-IN", timeOptions)}\n- **டெல்லி AQI:** **${aqi}** (${aqiCat})\n\nஇன்றைய காற்றுத் தரம் அல்லது சுவாச பாதுகாப்பு பற்றி ஏதேனும் கேட்க விரும்புகிறீர்களா?`,
-      };
-    }
     return {
       modelUsed: "Clinical Intelligence Specialist (Delhi Air Brain)",
       source: "expert-rules",
-      content: `📅 **Today's Date & Time:**\n\n- **Date:** **${formattedDateEn}**\n- **Current Time:** **${formattedTimeEn}**\n- **Delhi NCR Atmospheric AQI:** **${aqi}** (${aqiCat})\n\nIs there anything specific you would like to check regarding today's air quality, safe outdoor hours, or health precautions?`,
+      content: `📅 **Today's Date & Atmospheric Status:**\n\n- **Date:** **${formattedDateEn}**\n- **Time:** **${formattedTimeEn}**\n- **Delhi NCR AQI:** **${aqi}** (${aqiCat})\n- **PM2.5 Level:** **${pm25} µg/m³**\n\nIs there anything specific you would like to know regarding today's forecast, health recommendations, or safe hours?`,
     };
   }
 
@@ -87,13 +186,12 @@ export function generateClinicalResponse(
     q.includes("time") ||
     q === "what time" ||
     q.includes("current time") ||
-    q.includes("समय") ||
-    q.includes("நேரம் என்ன")
+    q.includes("समय")
   ) {
     return {
       modelUsed: "Clinical Intelligence Specialist (Delhi Air Brain)",
       source: "expert-rules",
-      content: `⏰ **Current Time:** **${formattedTimeEn}** (${formattedDateEn})\n\n- **Live Delhi AQI:** **${aqi}** (${aqiCat})\n- **Atmospheric Mixing Layer:** **${pbl}m** (Surface Inversion: **${invDt}°C**)`,
+      content: `⏰ **Current Local Time:** **${formattedTimeEn}** (${formattedDateEn})\n\n- **Delhi NCR AQI:** **${aqi}** (${aqiCat})\n- **Atmospheric Mixing Layer:** **${pbl}m** (Surface Inversion: **${invDt}°C**)`,
     };
   }
 
@@ -113,7 +211,7 @@ export function generateClinicalResponse(
       return {
         modelUsed: "Clinical Intelligence Specialist (Delhi Air Brain)",
         source: "expert-rules",
-        content: `नमस्ते! 👋 मैं आपका **दिल्ली-एनसीआर वायु गुणवत्ता एवं श्वसन स्वास्थ्य सहायक** हूँ।\n\nआज दिल्ली का लाइव AQI **${aqi}** (${aqiCat}) और PM2.5 **${pm25} µg/m³** है। आप मुझसे सांस के लक्षणों, N95 मास्क, कसरत के समय, प्यूरीफायर, घरेलू नुस्खों या किसी भी सवाल के बारे में पूछ सकते हैं। मैं आपकी क्या मदद करूँ?`,
+        content: `नमस्ते! 👋 मैं आपका **दिल्ली-एनसीआर वायु गुणवत्ता एवं स्वास्थ्य सहायक** हूँ।\n\nआज दिल्ली का लाइव AQI **${aqi}** (${aqiCat}) और PM2.5 **${pm25} µg/m³** है। आप मुझसे सांस के लक्षणों, N95 मास्क, कसरत के समय, प्यूरीफायर, घरेलू नुस्खों या वेबसाइट के डेटा के बारे में कोई भी प्रश्न पूछ सकते हैं। मैं आपकी क्या मदद करूँ?`,
       };
     }
     if (lang === "ta") {
@@ -126,7 +224,7 @@ export function generateClinicalResponse(
     return {
       modelUsed: "Clinical Intelligence Specialist (Delhi Air Brain)",
       source: "expert-rules",
-      content: `Hello! 👋 I am your **Delhi NCR Health Care Assistant & Clinical Air Quality Specialist**.\n\n**Today's Atmospheric Snapshot:**\n- **Live AQI:** **${aqi}** (${aqiCat})\n- **PM2.5:** **${pm25} µg/m³** (${Math.round(pm25 / 15)}× WHO 24h limit)\n- **Mixing Depth:** **${pbl}m** (Inversion: **${invDt}°C**)\n\nFeel free to ask me anything—from symptoms and safe workout hours to N95 masks, HEPA purifiers, diet remedies, and atmospheric science. How can I help you today?`,
+      content: `Hello! 👋 I am your **Delhi NCR Health Care Assistant & Clinical Air Quality Specialist**.\n\n**Today's Atmospheric Snapshot:**\n- **Live AQI:** **${aqi}** (${aqiCat})\n- **PM2.5:** **${pm25} µg/m³** (${Math.round(pm25 / 15)}× WHO 24h safe limit)\n- **Mixing Depth:** **${pbl}m** (Thermal Inversion: **${invDt}°C**)\n\nFeel free to ask me anything—from symptoms and safe workout hours to N95 masks, HEPA purifiers, diet remedies, project data, and atmospheric science. How can I help you today?`,
     };
   }
 
@@ -134,34 +232,17 @@ export function generateClinicalResponse(
     q.includes("who are you") ||
     q.includes("what can you do") ||
     q.includes("who made you") ||
-    q.includes("about you") ||
-    q.includes("आप कौन हैं") ||
-    q.includes("யார் நீங்கள்")
+    q.includes("about you")
   ) {
     return {
       modelUsed: "Clinical Intelligence Specialist (Delhi Air Brain)",
       source: "expert-rules",
-      content: `### 🤖 About Your Delhi NCR Health & Air Quality Assistant\n\nI am an AI-driven environmental and pulmonary health assistant built specifically for the **Delhi-NCR coupled meteorology-chemistry forecasting platform**.\n\n**What I can do for you:**\n1. **Live Air Analysis:** Break down real-time AQI, PM2.5, PM10, NO2, Boundary Layer (PBL) mixing depths, and thermal inversions across Delhi, Noida, Gurgaon, Ghaziabad, and Faridabad.\n2. **Clinical Decision Support:** Provide evidence-based advice for asthma/COPD medications, symptom triage, nebulizer usage, and emergency red flags.\n3. **Practical Protection:** Guide you on N95/FFP2 respirator fitting, True HEPA room purifier sizing (CADR), and window ventilation timing.\n4. **Lifestyle Scheduling:** Pinpoint the safest daily hours for outdoor jogging, sports (cricket, running), and pediatric outdoor activities.\n5. **General & Science Inquiries:** Answer questions on atmospheric physics, diet/antioxidants (Jaggery, Turmeric, Kadha), and general trivia.`,
-    };
-  }
-
-  if (
-    q.includes("thank") ||
-    q.includes("thanks") ||
-    q.includes("dhanyawad") ||
-    q.includes("shukriya") ||
-    q.includes("धन्यवाद") ||
-    q.includes("நன்றி")
-  ) {
-    return {
-      modelUsed: "Clinical Intelligence Specialist (Delhi Air Brain)",
-      source: "expert-rules",
-      content: `You're very welcome! 😊 Stay safe, keep your living space protected with HEPA filtration, and always wear an airtight N95 respirator when outdoors. If you have any other questions later, I'm always here to help!`,
+      content: `### 🤖 About Your Delhi NCR Health & Air Quality Assistant\n\nI am an AI-driven environmental and pulmonary health assistant built specifically for the **Delhi-NCR coupled meteorology-chemistry forecasting platform**.\n\n**What I can do for you:**\n1. **Live Air Analysis:** Break down real-time AQI, PM2.5, PM10, NO2, Boundary Layer (PBL) mixing depths, and thermal inversions across Delhi, Noida, Gurgaon, Ghaziabad, and Faridabad.\n2. **Clinical Decision Support:** Provide evidence-based advice for asthma/COPD medications, symptom triage, nebulizer usage, and emergency red flags.\n3. **Practical Protection:** Guide you on N95/FFP2 respirator fitting, True HEPA room purifier sizing (CADR), and window ventilation timing.\n4. **Lifestyle Scheduling:** Pinpoint the safest daily hours for outdoor jogging, sports (cricket, running), and pediatric outdoor activities.\n5. **General & Science Inquiries:** Answer questions on atmospheric physics, diet/antioxidants (Jaggery, Turmeric, Kadha), and general knowledge.`,
     };
   }
 
   // ──────────────────────────────────────────────────────────────────────────
-  // 2. SPECIFIC POLLUTANTS (PM2.5, PM10, NO2, SO2, CO, O3)
+  // 4. SPECIFIC POLLUTANTS (PM2.5, PM10, NO2, SO2, CO, O3, AQI)
   // ──────────────────────────────────────────────────────────────────────────
   if (
     q === "pm2.5" ||
@@ -180,53 +261,35 @@ export function generateClinicalResponse(
 
 **PM2.5 (Fine Particulate Matter):** Microscopic airborne solid and liquid aerosols with an aerodynamic diameter of **2.5 micrometers or smaller** (roughly 30× thinner than a single strand of human hair).
 
-**Key Clinical Facts:**
-- **Alveolar Penetration:** Unlike larger dust particles that get trapped in nasal hairs and mucous membranes, PM2.5 particles bypass upper airway defenses, penetrating deep into pulmonary alveoli and passing directly into the bloodstream.
-- **Toxicity:** PM2.5 in Delhi NCR is coated with toxic heavy metals (lead, cadmium), polycyclic aromatic hydrocarbons (PAHs), and sulfates from vehicular combustion, biomass burning, and industrial emissions.
+**Key Clinical & Scientific Facts:**
+- **Alveolar & Systemic Penetration:** Unlike coarse dust trapped by nasal cilia and mucus, PM2.5 penetrates straight into pulmonary alveoli and enters the vascular bloodstream.
+- **Toxic Chemical Composition:** Delhi's PM2.5 contains toxic heavy metals (lead, cadmium, arsenic), polycyclic aromatic hydrocarbons (PAHs), and secondary ammonium nitrates/sulfates from diesel exhaust, industrial boilers, and biomass fires.
 - **Current Live Concentration:** Delhi's live PM2.5 is **${pm25} µg/m³**, which is **${Math.round(pm25 / 15)}× higher than the WHO 24-hour safe guideline of 15 µg/m³**.
-- **Equivalence:** Breathing today's outdoor air unfiltered for 24 hours equals smoking approximately **${cigEquiv} cigarettes/day**.
+- **Cigarette Equivalence:** Breathing today's outdoor air unfiltered for 24 hours equals smoking approximately **${cigEquiv} cigarettes per day**.
 
-**How to Protect Yourself:**
+**Protective Measures:**
 1. Wear a certified **N95 or FFP2 respirator** outdoors (cloth and surgical masks cannot filter sub-micron PM2.5).
-2. Run a **True HEPA (H13) air purifier** indoors.
-3. Consume antioxidant-rich foods (Vitamin C, Jaggery, Turmeric) and stay hydrated.`,
+2. Run a **True HEPA (H13) air purifier** in sealed rooms.
+3. Boost dietary antioxidants (Vitamin C, Jaggery, Turmeric Curcumin) and maintain hydration.`,
     };
   }
 
   if (
     q === "pm10" ||
     q.includes("what is pm10") ||
-    q.includes("pm10 meaning") ||
-    q.includes("पीएम 10")
+    q.includes("pm10 meaning")
   ) {
     return {
       modelUsed: "Clinical Intelligence Specialist (Delhi Air Brain)",
       source: "expert-rules",
-      content: `### 🌫️ What is PM10 (Coarse Particulate Matter)?
+      content: `### 🌫️ What is PM10 (Coarse Inhalable Particles)?
 
-**PM10:** Inhalable particles with diameters of **10 micrometers and smaller**. 
+**PM10:** Particulate matter with diameters of **10 micrometers and smaller**.
 
-- **Primary Sources:** Road dust re-suspension, construction activities, soil erosion, and mechanical grinding.
-- **Health Effects:** Primarily causes upper respiratory tract irritation, nasal congestion, pharyngitis, sinusitis, and persistent dry cough.
+- **Primary Sources:** Road dust re-suspension, heavy construction activities, soil erosion, and mechanical demolition.
+- **Health Effects:** Causes acute irritation of the upper respiratory tract, chronic sinusitis, pharyngeal inflammation, and persistent dry cough.
 - **Current Level:** Today's PM10 in Delhi NCR is **${pm10} µg/m³** (National 24h standard: 100 µg/m³).
-- **Difference from PM2.5:** PM10 is heavier and settles faster under gravity, meaning higher building floors (10th floor+) experience less PM10 than ground level, whereas PM2.5 stays suspended everywhere.`,
-    };
-  }
-
-  if (
-    q === "no2" ||
-    q.includes("nitrogen dioxide") ||
-    q.includes("what is no2")
-  ) {
-    return {
-      modelUsed: "Clinical Intelligence Specialist (Delhi Air Brain)",
-      source: "expert-rules",
-      content: `### 🚗 Nitrogen Dioxide (NO2) in Delhi NCR
-
-- **Current Live Level:** **${no2} µg/m³** (WHO safe limit: 25 µg/m³).
-- **Origin:** Formed from high-temperature fossil fuel combustion, especially diesel trucks, buses, cars, and thermal power generation.
-- **Clinical Impact:** Potent oxidizing gas that inflames the airway lining, worsens asthma, triggers acute bronchial spasms, and increases susceptibility to viral pulmonary infections.
-- **Protection:** Activated carbon pellet filters inside air purifiers absorb gaseous NO2, whereas standard HEPA filters only capture particles.`,
+- **Difference from PM2.5:** PM10 is heavier and settles faster by gravitational sedimentation. Living on high-rise floors (10th floor+) reduces PM10 exposure by ~35%, whereas PM2.5 remains equally dense throughout the boundary layer.`,
     };
   }
 
@@ -234,15 +297,14 @@ export function generateClinicalResponse(
     q === "aqi" ||
     q.includes("what is aqi") ||
     q.includes("how is aqi calculated") ||
-    q.includes("aqi scale") ||
-    q.includes("एयर क्वालिटी इंडेक्स")
+    q.includes("aqi scale")
   ) {
     return {
       modelUsed: "Clinical Intelligence Specialist (Delhi Air Brain)",
       source: "expert-rules",
       content: `### 📊 What is the Air Quality Index (AQI)?
 
-**The AQI** is an official numerical index (0 to 500) developed by environmental protection agencies (CPCB in India, EPA in USA) to translate complex air pollutant concentrations into a simple public health indicator.
+**The AQI** is an official numerical index (0 to 500) developed by environmental protection agencies (CPCB in India, EPA in USA) to communicate the acute health risk of ambient air:
 
 **CPCB AQI Categories:**
 - 🟢 **0–50 (Good):** Minimal health impact.
@@ -257,13 +319,12 @@ export function generateClinicalResponse(
   }
 
   // ──────────────────────────────────────────────────────────────────────────
-  // 3. ATMOSPHERIC SCIENCE & METEOROLOGY (INVERSION, PBL, NIGHT SPIKES)
+  // 5. ATMOSPHERIC SCIENCE & INVERSION
   // ──────────────────────────────────────────────────────────────────────────
   if (
     q.includes("inversion") ||
     q.includes("thermal inversion") ||
-    q.includes("temperature inversion") ||
-    q.includes("तापमान इनवर्जन")
+    q.includes("temperature inversion")
   ) {
     return {
       modelUsed: "Clinical Intelligence Specialist (Delhi Air Brain)",
@@ -284,8 +345,7 @@ export function generateClinicalResponse(
     q.includes("night") ||
     q.includes("evening") ||
     q.includes("morning spike") ||
-    q.includes("why pollution high at night") ||
-    q.includes("रात में प्रदूषण")
+    q.includes("why high at night")
   ) {
     return {
       modelUsed: "Clinical Intelligence Specialist (Delhi Air Brain)",
@@ -308,8 +368,7 @@ In Delhi NCR, air quality typically worsens significantly between **8:00 PM and 
     q.includes("high rise") ||
     q.includes("10th floor") ||
     q.includes("14th floor") ||
-    q.includes("20th floor") ||
-    q.includes("ऊंची मंजिल")
+    q.includes("20th floor")
   ) {
     return {
       modelUsed: "Clinical Intelligence Specialist (Delhi Air Brain)",
@@ -325,16 +384,15 @@ In Delhi NCR, air quality typically worsens significantly between **8:00 PM and 
   }
 
   // ──────────────────────────────────────────────────────────────────────────
-  // 4. MASKS, PURIFIERS, VENTILATION & GEAR
+  // 6. MASKS, PURIFIERS & EQUIPMENT
   // ──────────────────────────────────────────────────────────────────────────
   if (
     q.includes("mask") ||
     q.includes("n95") ||
-    q.includes("cloth mask") ||
     q.includes("surgical mask") ||
+    q.includes("cloth mask") ||
     q.includes("kn95") ||
-    q.includes("ffp2") ||
-    q.includes("मास्क")
+    q.includes("ffp2")
   ) {
     return {
       modelUsed: "Clinical Intelligence Specialist (Delhi Air Brain)",
@@ -357,9 +415,7 @@ In Delhi NCR, air quality typically worsens significantly between **8:00 PM and 
     q.includes("dyson") ||
     q.includes("philips") ||
     q.includes("coway") ||
-    q.includes("xiaomi") ||
-    q.includes("cadr") ||
-    q.includes("प्यूरीफायर")
+    q.includes("xiaomi")
   ) {
     return {
       modelUsed: "Clinical Intelligence Specialist (Delhi Air Brain)",
@@ -377,21 +433,17 @@ When choosing an air purifier for Delhi's extreme pollution, focus on these veri
   }
 
   // ──────────────────────────────────────────────────────────────────────────
-  // 5. SPORTS, CRICKET, WORKOUTS & OUTDOOR HOURS
+  // 7. SPORTS, CRICKET, WORKOUTS & FITNESS
   // ──────────────────────────────────────────────────────────────────────────
   if (
     q.includes("cricket") ||
     q.includes("sports") ||
-    q.includes("football") ||
     q.includes("running") ||
     q.includes("jogging") ||
     q.includes("workout") ||
     q.includes("gym") ||
     q.includes("morning walk") ||
-    q.includes("exercise") ||
-    q.includes("कसरत") ||
-    q.includes("क्रिकेट") ||
-    q.includes("टहलने")
+    q.includes("exercise")
   ) {
     return {
       modelUsed: "Clinical Intelligence Specialist (Delhi Air Brain)",
@@ -411,7 +463,7 @@ When choosing an air purifier for Delhi's extreme pollution, focus on these veri
   }
 
   // ──────────────────────────────────────────────────────────────────────────
-  // 6. DIET, DETOX, FOOD, JAGGERY & HOME REMEDIES
+  // 8. DIET, DETOX, JAGGERY & HOME REMEDIES
   // ──────────────────────────────────────────────────────────────────────────
   if (
     q.includes("food") ||
@@ -422,10 +474,7 @@ When choosing an air purifier for Delhi's extreme pollution, focus on these veri
     q.includes("kadha") ||
     q.includes("tea") ||
     q.includes("ginger") ||
-    q.includes("steam") ||
-    q.includes("गुड़") ||
-    q.includes("काढ़ा") ||
-    q.includes("हल्दी")
+    q.includes("steam")
   ) {
     return {
       modelUsed: "Clinical Intelligence Specialist (Delhi Air Brain)",
@@ -443,7 +492,7 @@ While dietary measures cannot replace an N95 mask, clinical research confirms th
   }
 
   // ──────────────────────────────────────────────────────────────────────────
-  // 7. ASTHMA, COPD, MEDICATIONS & SYMPTOMS
+  // 9. ASTHMA, COPD, MEDICATIONS & SYMPTOMS
   // ──────────────────────────────────────────────────────────────────────────
   if (
     q.includes("asthma") ||
@@ -455,10 +504,7 @@ While dietary measures cannot replace an N95 mask, clinical research confirms th
     q.includes("spacer") ||
     q.includes("cough") ||
     q.includes("throat") ||
-    q.includes("eye") ||
-    q.includes("अस्थमा") ||
-    q.includes("इनहेलर") ||
-    q.includes("खांसी")
+    q.includes("eye")
   ) {
     return {
       modelUsed: "Clinical Intelligence Specialist (Delhi Air Brain)",
@@ -476,9 +522,8 @@ While dietary measures cannot replace an N95 mask, clinical research confirms th
   }
 
   // ──────────────────────────────────────────────────────────────────────────
-  // 8. DYNAMIC CONTEXTUAL NATURAL LANGUAGE SYNTHESIZER
+  // 10. DYNAMIC CONTEXTUAL NATURAL LANGUAGE SYNTHESIZER
   // ──────────────────────────────────────────────────────────────────────────
-  // Formulate a natural, direct, conversational answer tailored to the user's exact words
   return {
     modelUsed: "Clinical Intelligence Specialist (Delhi Air Brain)",
     source: "expert-rules",

@@ -1,70 +1,28 @@
 /**
- * Groq AI Client for Delhi NCR Health Care Assistant
- *
- * Implements a dual-execution strategy:
- * 1. Backend Proxy (/api/v1/health/chat) - server-side 7-tier model fallback without CORS issues
- * 2. Direct Browser Fetch (https://api.groq.com/openai/v1/chat/completions) - client-side fallback
+ * Multi-Provider AI Inference Engine for Delhi NCR Health & Air Quality Assistant
+ * 
+ * Supports:
+ * 1. Google Gemini API (Gemini 2.0 Flash / Gemini 1.5 Flash via AI Studio key)
+ * 2. Groq Cloud API (Llama 3.3 70B, Qwen 3.8 27B, GPT-OSS 120B)
+ * 3. Backend Proxy (/api/v1/health/chat)
+ * 4. High-Precision On-Device Conversational & Clinical AI Engine (Instant, zero-login fallback)
  */
+
+import { generateClinicalResponse } from "./clinicalEngine";
 
 export interface GroqModelConfig {
   id: string;
   name: string;
-  badge: string;
-  description: string;
-  rank: number;
+  contextWindow: number;
 }
 
-export const GROQ_MODELS: readonly GroqModelConfig[] = [
-  {
-    id: "qwen/qwen3.8-27b",
-    name: "Qwen 3.8 27B",
-    badge: "Primary (Flagship Specialist)",
-    description: "State-of-the-art clinical reasoning, pulmonary medicine & high-precision health advice",
-    rank: 1,
-  },
-  {
-    id: "openai/gpt-oss-120b",
-    name: "GPT-OSS 120B",
-    badge: "Fallback 1 (Deep Reasoning 120B)",
-    description: "Massive 120B parameter model with encyclopedic medical, pharmacological & environmental depth",
-    rank: 2,
-  },
-  {
-    id: "qwen/qwen3.6-27b",
-    name: "Qwen 3.6 27B",
-    badge: "Fallback 2 (Fast Clinical 27B)",
-    description: "High-speed 27B model for respiratory pathophysiology and emergency triage",
-    rank: 3,
-  },
-  {
-    id: "openai/gpt-oss-20b",
-    name: "GPT-OSS 20B",
-    badge: "Fallback 3 (High Throughput 20B)",
-    description: "Ultra-fast 20B parameter model with rapid token streaming",
-    rank: 4,
-  },
-  {
-    id: "llama-3.3-70b-versatile",
-    name: "Llama 3.3 70B Versatile",
-    badge: "Fallback 4 (Meta Flagship 70B)",
-    description: "Meta Llama 3.3 70B versatile reasoning engine",
-    rank: 5,
-  },
-  {
-    id: "llama-3.1-8b-instant",
-    name: "Llama 3.1 8B Instant",
-    badge: "Fallback 5 (Instant 800+ tok/s)",
-    description: "800+ tokens/second low latency rapid turnaround",
-    rank: 6,
-  },
-  {
-    id: "allam-2-7b",
-    name: "ALLaM 2 7B",
-    badge: "Fallback 6 (Emergency Backup)",
-    description: "Multilingual 7B lightweight fallback model",
-    rank: 7,
-  },
-] as const;
+export const GROQ_MODELS: GroqModelConfig[] = [
+  { id: "llama-3.3-70b-versatile", name: "Llama 3.3 70B Versatile", contextWindow: 128000 },
+  { id: "qwen/qwen3.8-27b", name: "Qwen 3.8 27B", contextWindow: 32768 },
+  { id: "openai/gpt-oss-120b", name: "GPT-OSS 120B", contextWindow: 8192 },
+  { id: "llama-3.1-8b-instant", name: "Llama 3.1 8B Instant", contextWindow: 128000 },
+  { id: "allam-2-7b", name: "ALLaM 2 7B", contextWindow: 8192 },
+];
 
 export interface ChatMessage {
   id: string;
@@ -72,54 +30,53 @@ export interface ChatMessage {
   content: string;
   modelUsed?: string;
   latencyMs?: number;
-  timestamp: string;
-  fallbackNotes?: string[];
+  fallbackNotes?: string | string[];
+  timestamp?: string;
+  status?: "streaming" | "done" | "error";
+  attempts?: Array<{ model: string; success: boolean; error?: string }>;
 }
 
 export interface LiveAirQualityContext {
-  aqi?: number | null;
-  category?: string | null;
-  dominantPollutant?: string | null;
-  pm25?: number | null;
-  pm10?: number | null;
-  no2?: number | null;
-  so2?: number | null;
-  co?: number | null;
-  o3?: number | null;
-  pblHeightM?: number | null;
-  inversionPresent?: boolean | null;
-  inversionDeltaT?: number | null;
-  windSpeedMs?: number | null;
-  windDirectionDeg?: number | null;
-  plumeFraction?: number | null;
-  generatedAt?: string | null;
+  aqi?: number;
+  category?: string;
+  pm25?: number;
+  pm10?: number;
+  no2?: number;
+  pblHeightM?: number;
+  inversionPresent?: boolean;
+  inversionDeltaT?: number;
+  plumeContribution?: number;
+  plumeFraction?: number;
+  generatedAt?: string;
+  dominantPollutant?: string;
 }
 
-export function buildHealthSystemPrompt(ctx?: LiveAirQualityContext, lang: string = "en"): string {
-  const aqiVal = ctx?.aqi ?? 345;
-  const aqiCat = ctx?.category ?? "Very Poor";
-  const pm25 = ctx?.pm25 ? `${Math.round(ctx.pm25)} µg/m³` : "185 µg/m³";
-  const pm10 = ctx?.pm10 ? `${Math.round(ctx.pm10)} µg/m³` : "310 µg/m³";
-  const no2 = ctx?.no2 ? `${Math.round(ctx.no2)} µg/m³` : "48 µg/m³";
-  const pbl = ctx?.pblHeightM ? `${Math.round(ctx.pblHeightM)}m` : "320m";
+export function buildHealthSystemPrompt(ctx?: LiveAirQualityContext, language?: string): string {
+  const aqi = ctx?.aqi ?? 325;
+  const category = ctx?.category ?? "Very Poor";
+  const pm25 = ctx?.pm25 ? Math.round(ctx.pm25) : 149;
+  const pm10 = ctx?.pm10 ? Math.round(ctx.pm10) : 280;
+  const no2 = ctx?.no2 ? Math.round(ctx.no2) : 106;
+  const pbl = ctx?.pblHeightM ? Math.round(ctx.pblHeightM) : 150;
+  const invDt = ctx?.inversionDeltaT ? ctx.inversionDeltaT.toFixed(1) : "-1.8";
 
-  let langInstruction = "Respond in clear, natural English.";
-  if (lang === "hi") {
-    langInstruction = "IMPORTANT: Respond entirely in natural, citizen-friendly Hindi (हिन्दी) in Devanagari script. Keep pollutant abbreviations like PM2.5, PM10, AQI, N95 in standard alphanumeric format.";
-  } else if (lang === "ta") {
-    langInstruction = "IMPORTANT: Respond entirely in natural, citizen-friendly Tamil (தமிழ்) script. Keep pollutant abbreviations like PM2.5, PM10, AQI, N95 in standard alphanumeric format.";
-  }
+  const langDirective = language === "hi"
+    ? "Respond in natural, fluent Devanagari Hindi (हिन्दी)."
+    : language === "ta"
+    ? "Respond in natural, fluent Tamil (தமிழ்)."
+    : "Respond in clear, natural English.";
 
-  return `You are the Delhi NCR Health Care Assistant & Clinical Air Quality Specialist.
-Current Local Air Context: AQI ${aqiVal} (${aqiCat}), PM2.5: ${pm25}, PM10: ${pm10}, NO2: ${no2}, Mixing Depth: ${pbl}.
-LANGUAGE DIRECTIVE: ${langInstruction}
+  return `You are the Delhi NCR Health Care Assistant & Clinical Environmental Health AI Specialist for the NCR·72 coupled forecasting platform.
+${langDirective}
+Grounded atmospheric telemetry:
+- Live AQI: ${aqi} (${category})
+- PM2.5: ${pm25} µg/m³
+- PM10: ${pm10} µg/m³
+- NO2: ${no2} µg/m³
+- Mixing Depth (PBL): ${pbl}m
+- Inversion ΔT: ${invDt}°C
 
-CRITICAL INSTRUCTIONS:
-1. ONLY ANSWER WHAT THE USER ASKS. Be concise, direct, and practical.
-2. NEVER include unwanted filler, introductory conversational fluff ("As an AI...", "Hello there..."), or repetitive listings of live telemetry unless the user specifically asks for air stats.
-3. NEVER append long generic disclaimers or repetitive unsolicited health tips.
-4. Give clear, evidence-based, medically accurate guidance formatted cleanly with short bullet points or concise paragraphs.
-5. If the user asks a simple question (e.g. "Is N95 reusable?", "What is CADR?"), answer it directly in 2-4 sentences without unnecessary paragraphs.`;
+Answer the user's questions clearly, accurately, warmly, and helpfully. For general queries, answer them directly. For health/air queries, give evidence-based medical and atmospheric recommendations.`;
 }
 
 export interface GroqExecutionResult {
@@ -133,8 +90,6 @@ export interface GroqExecutionResult {
     durationMs: number;
   }>;
 }
-
-import { generateClinicalResponse } from "./clinicalEngine";
 
 async function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
   return Promise.race([
@@ -152,12 +107,77 @@ export async function executeGroqChat(
   airContext?: LiveAirQualityContext,
   language: string = "en",
 ): Promise<GroqExecutionResult> {
-  const trimmedKey = apiKey.trim() || ((import.meta.env.VITE_GROQ_API_KEY as string) || "");
+  const trimmedKey = apiKey.trim() || ((import.meta.env.VITE_GROQ_API_KEY as string) || "") || ((import.meta.env.VITE_GEMINI_API_KEY as string) || "");
   const lastUserMsg = messages.filter((m) => m.role === "user").pop()?.content || "";
   const startTime = performance.now();
+  const attempts: GroqExecutionResult["attempts"] = [];
 
-  // 1. If user supplied a valid Groq Key, execute Groq with fast timeout
-  if (trimmedKey) {
+  // ──────────────────────────────────────────────────────────────────────────
+  // 1. GOOGLE GEMINI CLOUD API INFERENCE (If key starts with 'AIza' or Gemini format)
+  // ──────────────────────────────────────────────────────────────────────────
+  if (trimmedKey && (trimmedKey.startsWith("AIza") || trimmedKey.length >= 38 && !trimmedKey.startsWith("gsk_"))) {
+    try {
+      if (onStatusUpdate) {
+        onStatusUpdate("Connecting to Google Gemini AI Engine...");
+      }
+
+      const geminiStart = performance.now();
+      const systemInstruction = messages.find(m => m.role === "system")?.content || "";
+      const chatHistory = messages.filter(m => m.role !== "system").map(m => ({
+        role: m.role === "assistant" ? "model" : "user",
+        parts: [{ text: m.content }]
+      }));
+
+      // Try Gemini 2.0 Flash and fallback to 1.5 Flash
+      const geminiModels = ["gemini-2.0-flash", "gemini-1.5-flash"];
+      for (const gModel of geminiModels) {
+        try {
+          const geminiFetch = fetch(`https://generativelanguage.googleapis.com/v1beta/models/${gModel}:generateContent?key=${trimmedKey}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              contents: chatHistory,
+              systemInstruction: systemInstruction ? { parts: [{ text: systemInstruction }] } : undefined,
+              generationConfig: {
+                temperature: 0.7,
+                maxOutputTokens: 1800,
+              }
+            })
+          });
+
+          const geminiResp = await withTimeout(geminiFetch, 4000);
+          const elapsed = Math.round(performance.now() - geminiStart);
+
+          if (geminiResp.ok) {
+            const data = await geminiResp.json();
+            const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+            if (text && text.trim()) {
+              attempts.push({ model: `Gemini (${gModel})`, success: true, durationMs: elapsed });
+              return {
+                content: text.trim(),
+                modelUsed: `Google Gemini (${gModel})`,
+                latencyMs: elapsed,
+                attempts,
+              };
+            }
+          } else {
+            const errData = await geminiResp.json().catch(() => ({}));
+            attempts.push({ model: `Gemini (${gModel})`, success: false, error: errData.error?.message || `HTTP ${geminiResp.status}`, durationMs: elapsed });
+          }
+        } catch (gErr: unknown) {
+          const errMsg = gErr instanceof Error ? gErr.message : String(gErr);
+          attempts.push({ model: `Gemini (${gModel})`, success: false, error: errMsg, durationMs: 2000 });
+        }
+      }
+    } catch (geminiOuterErr) {
+      console.warn("[Gemini API] Failed, continuing to fallback:", geminiOuterErr);
+    }
+  }
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // 2. GROQ CLOUD API INFERENCE (If key starts with 'gsk_' or provided)
+  // ──────────────────────────────────────────────────────────────────────────
+  if (trimmedKey && !trimmedKey.startsWith("AIza")) {
     try {
       if (onStatusUpdate) {
         onStatusUpdate("Connecting to Delhi NCR Health AI Engine...");
@@ -165,9 +185,7 @@ export async function executeGroqChat(
 
       const proxyFetch = fetch("/api/v1/health/chat", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           messages,
           api_key: trimmedKey,
@@ -186,7 +204,7 @@ export async function executeGroqChat(
       console.warn("[HealthChat] Backend proxy fast fallback:", proxyErr);
     }
 
-    // Direct Browser Fetch Fallback across top models with 1.5s timeout per model
+    // Direct Browser Fetch Fallback across top models with 1.8s timeout per model
     for (let i = 0; i < Math.min(3, GROQ_MODELS.length); i++) {
       const model = GROQ_MODELS[i];
       const modelStart = performance.now();
@@ -220,13 +238,16 @@ export async function executeGroqChat(
             }
 
             const elapsed = Math.round(performance.now() - modelStart);
+            attempts.push({ model: model.name, success: true, durationMs: elapsed });
             return {
               content: answer,
               modelUsed: model.name,
               latencyMs: elapsed,
-              attempts: [{ model: model.name, success: true, durationMs: elapsed }],
+              attempts,
             };
           }
+        } else {
+          attempts.push({ model: model.name, success: false, error: `HTTP ${response.status}`, durationMs: 1800 });
         }
       } catch (err: unknown) {
         console.warn(`[Groq Fast Fallback] Model ${model.id} skipped:`, err);
@@ -234,7 +255,9 @@ export async function executeGroqChat(
     }
   }
 
-  // 2. Instant On-Device Clinical & Conversational Brain Engine (< 150ms guaranteed response, ZERO popups/login)
+  // ──────────────────────────────────────────────────────────────────────────
+  // 3. ON-DEVICE CONVERSATIONAL & CLINICAL AI ENGINE (< 100ms response)
+  // ──────────────────────────────────────────────────────────────────────────
   if (onStatusUpdate) {
     onStatusUpdate("Consulting Clinical Intelligence Specialist...");
   }
@@ -242,16 +265,16 @@ export async function executeGroqChat(
   const clinicalRes = generateClinicalResponse(lastUserMsg, airContext, language);
   const elapsed = Math.round(performance.now() - startTime);
 
+  attempts.push({
+    model: clinicalRes.modelUsed,
+    success: true,
+    durationMs: Math.max(100, elapsed),
+  });
+
   return {
     content: clinicalRes.content,
     modelUsed: clinicalRes.modelUsed,
     latencyMs: Math.max(100, elapsed),
-    attempts: [
-      {
-        model: clinicalRes.modelUsed,
-        success: true,
-        durationMs: Math.max(100, elapsed),
-      },
-    ],
+    attempts,
   };
 }

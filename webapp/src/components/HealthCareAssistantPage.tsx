@@ -369,7 +369,13 @@ export function HealthCareAssistantPage({
               title="Configure Groq Cloud API Key"
             >
               <KeyRound size={12} />
-              <span>{apiKey ? "Groq API Key (Set)" : "Groq API Key"}</span>
+              <span>
+                {apiKey
+                  ? apiKey.startsWith("AIza")
+                    ? "Gemini AI (Active)"
+                    : "Groq AI (Active)"
+                  : "Cloud AI Key"}
+              </span>
             </button>
 
             <span
@@ -882,7 +888,7 @@ export function HealthCareAssistantPage({
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
               <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
                 <KeyRound size={18} style={{ color: "var(--cyan)" }} />
-                <h3 style={{ margin: 0, fontSize: "1.1rem", fontWeight: 600 }}>Groq Cloud API Key</h3>
+                <h3 style={{ margin: 0, fontSize: "1.1rem", fontWeight: 600 }}>Cloud AI Key (Optional)</h3>
               </div>
               <button
                 type="button"
@@ -894,18 +900,18 @@ export function HealthCareAssistantPage({
             </div>
 
             <p style={{ fontSize: "12.5px", color: "var(--mist)", lineHeight: 1.5, marginBottom: "1rem" }}>
-              The assistant includes a <strong>Built-in Clinical Pulmonary Intelligence Engine</strong> that works out of the box with zero API keys required. You can optionally provide your own Groq API Key to enable live cloud LLM inference across 7 models.
+              The assistant includes a <strong>Built-in Clinical & Environmental Intelligence Engine</strong> that works 100% out of the box with zero API keys required. You can optionally paste a free <strong>Google Gemini API Key</strong> (<a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noreferrer" style={{ color: "var(--cyan)", textDecoration: "underline" }}>get free key</a>) or <strong>Groq API Key</strong> (<a href="https://console.groq.com/keys" target="_blank" rel="noreferrer" style={{ color: "var(--cyan)", textDecoration: "underline" }}>get free key</a>) for live cloud LLM reasoning.
             </p>
 
             <div style={{ marginBottom: "1.2rem" }}>
               <label style={{ display: "block", fontSize: "11px", fontFamily: "var(--mono)", color: "var(--mist-dim)", marginBottom: "0.4rem" }}>
-                GROQ API KEY (gsk_...)
+                GOOGLE GEMINI OR GROQ API KEY
               </label>
               <input
                 type="password"
                 value={customKeyInput}
                 onChange={(e) => setCustomKeyInput(e.target.value)}
-                placeholder="gsk_xxxxxxxxxxxxxxxxxxxxxxxx..."
+                placeholder="Paste Gemini (AIzaSy...) or Groq (gsk_...) key"
                 style={{
                   width: "100%",
                   padding: "0.75rem",
