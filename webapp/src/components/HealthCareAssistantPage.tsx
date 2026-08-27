@@ -41,39 +41,6 @@ interface HealthCareAssistantPageProps {
   onBack: () => void;
 }
 
-const SAMPLE_QUESTIONS = [
-  {
-    icon: Stethoscope,
-    title: "Asthma & Inhaler Care",
-    prompt: "What specific precautions and inhaler adjustments should an asthma or COPD patient take given today's Delhi air quality?",
-  },
-  {
-    icon: Zap,
-    title: "Safe Outdoor Hours",
-    prompt: "When is the safest time for an outdoor walk or workout in Delhi over the next 24-48 hours?",
-  },
-  {
-    icon: ShieldAlert,
-    title: "N95 vs Surgical Masks",
-    prompt: "Why do surgical and cloth masks fail against PM2.5 in Delhi, and how does a certified N95 protect the lungs?",
-  },
-  {
-    icon: Activity,
-    title: "Pediatric & Pregnancy Risks",
-    prompt: "What are the specific health risks of the current PM2.5 levels for young children and pregnant women?",
-  },
-  {
-    icon: Sparkles,
-    title: "HEPA Purifier Settings",
-    prompt: "How should I run my HEPA air purifier in my bedroom during high pollution periods?",
-  },
-  {
-    icon: AlertTriangle,
-    title: "Emergency Red Flags",
-    prompt: "What acute respiratory or cardiac symptoms from smog exposure require immediate emergency hospital attention?",
-  },
-];
-
 export function HealthCareAssistantPage({
   forecast,
   hour,
@@ -106,19 +73,90 @@ export function HealthCareAssistantPage({
   const pm10Val = cityAggregate?.sub_indices?.["PM10"]?.conc ?? (consensus?.metrics?.pm10 ?? 305);
   const no2Val = cityAggregate?.sub_indices?.["NO2"]?.conc ?? (consensus?.metrics?.no2 ?? 48);
 
+  const getWelcomeContent = (lang: string) => {
+    if (lang === "hi") {
+      return `नमस्ते! मैं आपका **दिल्ली-एनसीआर श्वसन स्वास्थ्य सहायक एवं क्लीनिकल विशेषज्ञ** हूँ।\n\nमुझसे सांस संबंधी लक्षणों, दवाइयों, N95 मास्क, HEPA एयर प्यूरीफायर या सुरक्षित समय के बारे में कोई भी प्रश्न पूछें।`;
+    }
+    if (lang === "ta") {
+      return `வணக்கம்! நான் உங்கள் **டெல்லி-என்சிஆர் சுவாச சுகாதார உதவியாளர்**.\n\nசுவாச பிரச்சனைகள், முகக்கவசங்கள், ஏர் ப்யூரிஃபையர் அமைப்புகள் அல்லது பாதுகாப்பான நேரங்கள் குறித்து எந்த கேள்வியையும் என்னிடம் கேட்கலாம்.`;
+    }
+    return `Hello! I am your **Delhi NCR Health Care Assistant & Clinical Air Specialist**.\n\nAsk me any specific question about respiratory symptoms, medication management, N95 mask protection, HEPA purifier settings, or safe outdoor schedules. I will give you direct, evidence-based answers tailored to Delhi's air quality.`;
+  };
+
   const [messages, setMessages] = useState<ChatMessage[]>(() => [
     {
       id: "welcome-1",
       role: "assistant",
-      content: language === "hi"
-        ? `नमस्ते! मैं आपका **दिल्ली-एनसीआर श्वसन स्वास्थ्य सहायक एवं क्लीनिकल विशेषज्ञ** हूँ।\n\nमुझसे सांस संबंधी लक्षणों, दवाइयों, N95 मास्क, HEPA एयर प्यूरीफायर या सुरक्षित समय के बारे में कोई भी प्रश्न पूछें।`
-        : language === "ta"
-        ? `வணக்கம்! நான் உங்கள் **டெல்லி-என்சிஆர் சுவாச சுகாதார உதவியாளர்**.\n\nசுவாச பிரச்சனைகள், முகக்கவசங்கள், ஏர் ப்யூரிஃபையர் அமைப்புகள் அல்லது பாதுகாப்பான நேரங்கள் குறித்து எந்த கேள்வியையும் என்னிடம் கேட்கலாம்.`
-        : `Hello! I am your **Delhi NCR Health Care Assistant & Clinical Air Specialist**.\n\nAsk me any specific question about respiratory symptoms, medication management, N95 mask protection, HEPA purifier settings, or safe outdoor schedules. I will give you direct, evidence-based answers tailored to Delhi's air quality.`,
+      content: getWelcomeContent(language),
       modelUsed: "Qwen 3.8 27B Specialist",
       timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
     },
   ]);
+
+  // Reactive language sync: immediately update welcome message when user changes language
+  useEffect(() => {
+    setMessages((prev) => {
+      if (prev.length === 1 && (prev[0].id === "welcome-1" || prev[0].id === "welcome-reset")) {
+        return [
+          {
+            id: "welcome-1",
+            role: "assistant",
+            content: getWelcomeContent(language),
+            modelUsed: "Qwen 3.8 27B Specialist",
+            timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+          },
+        ];
+      }
+      return prev;
+    });
+  }, [language]);
+
+  const sampleQuestions = [
+    {
+      icon: Stethoscope,
+      title: t("healthAssistant.prompts.asthmaTitle"),
+      prompt: t("healthAssistant.prompts.asthmaPrompt"),
+    },
+    {
+      icon: Zap,
+      title: t("healthAssistant.prompts.outdoorTitle"),
+      prompt: t("healthAssistant.prompts.outdoorPrompt"),
+    },
+    {
+      icon: ShieldAlert,
+      title: t("healthAssistant.prompts.masksTitle"),
+      prompt: t("healthAssistant.prompts.masksPrompt"),
+    },
+    {
+      icon: Activity,
+      title: t("healthAssistant.prompts.pediatricTitle"),
+      prompt: t("healthAssistant.prompts.pediatricPrompt"),
+    },
+    {
+      icon: Sparkles,
+      title: t("healthAssistant.prompts.hepaTitle"),
+      prompt: t("healthAssistant.prompts.hepaPrompt"),
+    },
+    {
+      icon: AlertTriangle,
+      title: t("healthAssistant.prompts.emergencyTitle"),
+      prompt: t("healthAssistant.prompts.emergencyPrompt"),
+    },
+  ];
+
+  const getCategoryLabel = (cat?: string) => {
+    if (!cat) return "";
+    switch (cat.toLowerCase()) {
+      case "good": return t("hero.categories.good");
+      case "satisfactory": return t("hero.categories.satisfactory");
+      case "moderate": return t("hero.categories.moderate");
+      case "poor": return t("hero.categories.poor");
+      case "very poor": return t("hero.categories.veryPoor");
+      case "severe": return t("hero.categories.severe");
+      case "hazardous": return t("hero.categories.hazardous");
+      default: return cat;
+    }
+  };
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -302,7 +340,7 @@ export function HealthCareAssistantPage({
               }}
             >
               <Stethoscope size={13} style={{ color: "var(--cyan)" }} />
-              Clinical Intelligence Active
+              {t("healthAssistant.clinicalActive")}
             </span>
           </div>
         </div>
@@ -351,7 +389,7 @@ export function HealthCareAssistantPage({
                 lineHeight: 1.55,
               }}
             >
-              Direct, evidence-based clinical answers for respiratory symptoms, medication schedules, N95 mask protection, and safe exercise hours grounded in Delhi NCR&apos;s live atmosphere.
+              {t("healthAssistant.subtitle")}
             </p>
           </div>
 
@@ -368,10 +406,10 @@ export function HealthCareAssistantPage({
           >
             <div style={{ padding: "0.6rem 0.95rem", background: "rgba(10, 16, 26, 0.9)" }}>
               <div style={{ fontFamily: "var(--mono)", fontSize: "10px", color: "var(--mist-dim)", textTransform: "uppercase" }}>
-                Live AQI
+                {t("common.live")} AQI
               </div>
               <div style={{ fontFamily: "var(--mono)", fontSize: "1.2rem", color: "var(--amber)", fontWeight: 700 }}>
-                {liveAqi} <span style={{ fontSize: "10px", fontWeight: 400, color: "var(--mist)" }}>({liveCat})</span>
+                {liveAqi} <span style={{ fontSize: "10px", fontWeight: 400, color: "var(--mist)" }}>({getCategoryLabel(liveCat)})</span>
               </div>
             </div>
 
@@ -386,7 +424,7 @@ export function HealthCareAssistantPage({
 
             <div style={{ padding: "0.6rem 0.95rem", background: "rgba(10, 16, 26, 0.9)" }}>
               <div style={{ fontFamily: "var(--mono)", fontSize: "10px", color: "var(--mist-dim)", textTransform: "uppercase" }}>
-                Mixing Depth
+                {t("atmosphere.mixingDepth")}
               </div>
               <div style={{ fontFamily: "var(--mono)", fontSize: "1.2rem", color: "var(--bone)", fontWeight: 700 }}>
                 {Math.round(pblM)} <span style={{ fontSize: "10px", fontWeight: 400, color: "var(--mist)" }}>m</span>
@@ -411,7 +449,7 @@ export function HealthCareAssistantPage({
       >
         {/* Suggested Quick Question Chips */}
         <div style={{ display: "flex", gap: "0.5rem", overflowX: "auto", paddingBottom: "0.4rem" }}>
-          {SAMPLE_QUESTIONS.map((q, idx) => {
+          {sampleQuestions.map((q, idx) => {
             const Icon = q.icon;
             return (
               <button
@@ -480,6 +518,10 @@ export function HealthCareAssistantPage({
             >
               {messages.map((msg) => {
                 const isUser = msg.role === "user";
+                const senderName = isUser
+                  ? (language === "hi" ? "आप" : language === "ta" ? "நீங்கள்" : "You")
+                  : (language === "hi" ? "स्वास्थ्य सहायक" : language === "ta" ? "சுகாதார உதவியாளர்" : "Health Assistant");
+
                 return (
                   <div
                     key={msg.id}
@@ -537,7 +579,7 @@ export function HealthCareAssistantPage({
                       >
                         <div style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
                           <span style={{ fontWeight: 700, fontSize: "11.5px", color: isUser ? "var(--cyan)" : "var(--bone)" }}>
-                            {isUser ? "You" : "Health Assistant"}
+                            {senderName}
                           </span>
                           {!isUser && msg.modelUsed && (
                             <span
@@ -681,7 +723,7 @@ export function HealthCareAssistantPage({
                 }}
                 title="Reset conversation"
               >
-                Clear History
+                {t("healthAssistant.clearHistory")}
               </button>
 
               <div
