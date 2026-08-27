@@ -7,7 +7,7 @@ Mutation (POST /ingest) requires X-API-Key header.
 
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, Query, Request, HTTPException
+from fastapi import APIRouter, Depends, Query, Request, HTTPException, Response
 from pydantic import BaseModel
 from slowapi import Limiter
 from slowapi.util import get_remote_address
