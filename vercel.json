@@ -27,11 +27,12 @@
       "dest": "api/index.py"
     },
     {
-      "handle": "filesystem"
+      "src": "/assets/(.*)",
+      "dest": "/webapp/assets/$1"
     },
     {
       "src": "/(.*)",
-      "dest": "/index.html"
+      "dest": "/webapp/index.html"
     }
   ]
 }
