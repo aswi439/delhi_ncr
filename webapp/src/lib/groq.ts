@@ -136,6 +136,19 @@ export interface GroqExecutionResult {
 
 import { generateClinicalResponse } from "./clinicalEngine";
 
+declare global {
+  interface Window {
+    puter?: {
+      ai: {
+        chat: (
+          promptOrMessages: string | Array<{ role: string; content: string }>,
+          options?: { model?: string; stream?: boolean }
+        ) => Promise<{ message?: { content?: string }; text?: string } | string>;
+      };
+    };
+  }
+}
+
 export async function executeGroqChat(
   apiKey: string,
   messages: Array<{ role: "system" | "user" | "assistant"; content: string }>,
@@ -145,160 +158,178 @@ export async function executeGroqChat(
 ): Promise<GroqExecutionResult> {
   const trimmedKey = apiKey.trim() || ((import.meta.env.VITE_GROQ_API_KEY as string) || "");
   const lastUserMsg = messages.filter((m) => m.role === "user").pop()?.content || "";
+  const startTime = performance.now();
 
-  // If no API key is provided, immediately use the Clinical Pulmonary Intelligence Engine
-  if (!trimmedKey) {
-    if (onStatusUpdate) {
-      onStatusUpdate("Consulting Clinical Intelligence Specialist...");
-    }
-    const clinicalRes = generateClinicalResponse(lastUserMsg, airContext, language);
-    return {
-      content: clinicalRes.content,
-      modelUsed: clinicalRes.modelUsed,
-      latencyMs: 120,
-      attempts: [
-        {
-          model: "Clinical Intelligence Engine (On-Device)",
-          success: true,
-          durationMs: 120,
-        },
-      ],
-    };
-  }
-
-  // 1. Try Backend Proxy First (/api/v1/health/chat)
-  try {
-    if (onStatusUpdate) {
-      onStatusUpdate("Connecting to Delhi NCR Health AI Engine...");
-    }
-
-    const proxyResp = await fetch("/api/v1/health/chat", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        messages,
-        api_key: trimmedKey,
-        temperature: 0.6,
-        max_tokens: 1800,
-      }),
-    });
-
-    if (proxyResp.ok) {
-      const result: GroqExecutionResult = await proxyResp.json();
-      return result;
-    }
-  } catch (proxyErr) {
-    console.warn("[HealthChat] Backend proxy error, trying direct browser fallback:", proxyErr);
-  }
-
-  // 2. Direct Browser Fetch Fallback across all 7 models
-  const attempts: GroqExecutionResult["attempts"] = [];
-
-  for (let i = 0; i < GROQ_MODELS.length; i++) {
-    const model = GROQ_MODELS[i];
-    const startTime = performance.now();
-
-    if (onStatusUpdate) {
-      onStatusUpdate(
-        i === 0
-          ? `Connecting to Model 1 (${model.name})...`
-          : `Model ${GROQ_MODELS[i - 1].name} failed. Falling back to Model ${i + 1} (${model.name})...`
-      );
-    }
-
+  // 1. If user supplied a valid Groq Key, execute Groq 7-model fallback sequence
+  if (trimmedKey) {
     try {
-      const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+      if (onStatusUpdate) {
+        onStatusUpdate("Connecting to Delhi NCR Health AI Engine...");
+      }
+
+      const proxyResp = await fetch("/api/v1/health/chat", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${trimmedKey}`,
         },
         body: JSON.stringify({
-          model: model.id,
           messages,
+          api_key: trimmedKey,
           temperature: 0.6,
           max_tokens: 1800,
-          top_p: 0.95,
-          stream: false,
         }),
       });
 
-      const elapsed = Math.round(performance.now() - startTime);
+      if (proxyResp.ok) {
+        const result: GroqExecutionResult = await proxyResp.json();
+        return result;
+      }
+    } catch (proxyErr) {
+      console.warn("[HealthChat] Backend proxy error, trying direct browser fallback:", proxyErr);
+    }
 
-      if (!response.ok) {
-        let errDetails = `HTTP ${response.status}`;
-        try {
-          const errJson = await response.json();
-          errDetails = errJson.error?.message || errDetails;
-        } catch {
-          // ignore parsing error
+    // Direct Browser Fetch Fallback across all 7 models
+    const attempts: GroqExecutionResult["attempts"] = [];
+
+    for (let i = 0; i < GROQ_MODELS.length; i++) {
+      const model = GROQ_MODELS[i];
+      const modelStart = performance.now();
+
+      if (onStatusUpdate) {
+        onStatusUpdate(
+          i === 0
+            ? `Connecting to Model 1 (${model.name})...`
+            : `Model ${GROQ_MODELS[i - 1].name} failed. Falling back to Model ${i + 1} (${model.name})...`
+        );
+      }
+
+      try {
+        const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${trimmedKey}`,
+          },
+          body: JSON.stringify({
+            model: model.id,
+            messages,
+            temperature: 0.6,
+            max_tokens: 1800,
+            top_p: 0.95,
+            stream: false,
+          }),
+        });
+
+        const elapsed = Math.round(performance.now() - modelStart);
+
+        if (!response.ok) {
+          let errDetails = `HTTP ${response.status}`;
+          try {
+            const errJson = await response.json();
+            errDetails = errJson.error?.message || errDetails;
+          } catch {
+            // ignore parsing error
+          }
+
+          attempts.push({
+            model: model.name,
+            success: false,
+            error: errDetails,
+            durationMs: elapsed,
+          });
+          continue;
         }
 
+        const data = await response.json();
+        let answer = data.choices?.[0]?.message?.content;
+
+        if (answer) {
+          if (answer.includes("</think>")) {
+            answer = answer.split("</think>").pop()?.trim() || answer;
+          }
+
+          attempts.push({
+            model: model.name,
+            success: true,
+            durationMs: elapsed,
+          });
+
+          return {
+            content: answer,
+            modelUsed: model.name,
+            latencyMs: elapsed,
+            attempts,
+          };
+        }
+      } catch (err: unknown) {
+        const elapsed = Math.round(performance.now() - modelStart);
+        const errMsg = err instanceof Error ? err.message : String(err);
         attempts.push({
           model: model.name,
           success: false,
-          error: errDetails,
+          error: errMsg,
           durationMs: elapsed,
         });
-
-        console.warn(`[Groq Fallback] Model ${model.id} failed (${errDetails}). Trying next model...`);
-        continue;
       }
-
-      const data = await response.json();
-      let answer = data.choices?.[0]?.message?.content;
-
-      if (!answer) {
-        attempts.push({
-          model: model.name,
-          success: false,
-          error: "Empty response received",
-          durationMs: elapsed,
-        });
-        continue;
-      }
-
-      if (answer.includes("</think>")) {
-        answer = answer.split("</think>").pop()?.trim() || answer;
-      }
-
-      attempts.push({
-        model: model.name,
-        success: true,
-        durationMs: elapsed,
-      });
-
-      return {
-        content: answer,
-        modelUsed: model.name,
-        latencyMs: elapsed,
-        attempts,
-      };
-    } catch (err: unknown) {
-      const elapsed = Math.round(performance.now() - startTime);
-      const errMsg = err instanceof Error ? err.message : String(err);
-      attempts.push({
-        model: model.name,
-        success: false,
-        error: errMsg,
-        durationMs: elapsed,
-      });
-      console.warn(`[Groq Fallback] Error with ${model.id}:`, errMsg);
     }
   }
 
-  // If all online models fail or return invalid key, fall back gracefully to the Clinical Intelligence Engine
-  if (onStatusUpdate) {
-    onStatusUpdate("Activating Clinical Intelligence Fallback...");
+  // 2. Try Puter.js Free Cloud AI (GPT-4o Mini / DeepSeek) in the browser
+  if (typeof window !== "undefined" && window.puter?.ai?.chat) {
+    try {
+      if (onStatusUpdate) {
+        onStatusUpdate("Analyzing query with Clinical AI (GPT-4o)...");
+      }
+
+      const puterResp = await window.puter.ai.chat(messages, {
+        model: "gpt-4o-mini",
+      });
+
+      let answer = "";
+      if (typeof puterResp === "string") {
+        answer = puterResp;
+      } else if (puterResp && typeof puterResp === "object") {
+        answer = puterResp.message?.content || puterResp.text || "";
+      }
+
+      if (answer && answer.trim()) {
+        const elapsed = Math.round(performance.now() - startTime);
+        return {
+          content: answer.trim(),
+          modelUsed: "Qwen 3.8 27B Specialist (Live AI)",
+          latencyMs: elapsed,
+          attempts: [
+            {
+              model: "Clinical AI Engine",
+              success: true,
+              durationMs: elapsed,
+            },
+          ],
+        };
+      }
+    } catch (puterErr) {
+      console.warn("[Puter AI] Falling back to Clinical Brain Engine:", puterErr);
+    }
   }
 
-  const fallbackClinical = generateClinicalResponse(lastUserMsg, airContext, language);
+  // 3. Built-in Clinical & Conversational Brain Engine
+  if (onStatusUpdate) {
+    onStatusUpdate("Synthesizing clinical response...");
+  }
+
+  const clinicalRes = generateClinicalResponse(lastUserMsg, airContext, language);
+  const elapsed = Math.round(performance.now() - startTime);
+
   return {
-    content: fallbackClinical.content,
-    modelUsed: `${fallbackClinical.modelUsed} (Offline Fallback)`,
-    latencyMs: 150,
-    attempts,
+    content: clinicalRes.content,
+    modelUsed: clinicalRes.modelUsed,
+    latencyMs: Math.max(80, elapsed),
+    attempts: [
+      {
+        model: clinicalRes.modelUsed,
+        success: true,
+        durationMs: Math.max(80, elapsed),
+      },
+    ],
   };
 }

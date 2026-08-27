@@ -1,8 +1,9 @@
 /**
- * Delhi NCR Clinical Pulmonary & Environmental Health Intelligence Engine
+ * Delhi NCR Clinical Pulmonary, Environmental & Conversational AI Intelligence Engine
  * 
- * Provides evidence-based, live-atmosphere grounded clinical answers
- * in English, Hindi, and Tamil when an external LLM API key is unavailable or fails.
+ * Deeply analyzes user intent, atmospheric telemetry, locations, symptoms,
+ * activities, home remedies, and outdoor schedules to provide friendly,
+ * conversational, and highly specific answers in English, Hindi, and Tamil.
  */
 
 import type { LiveAirQualityContext } from "./groq";
@@ -10,7 +11,7 @@ import type { LiveAirQualityContext } from "./groq";
 export interface ClinicalResponse {
   content: string;
   modelUsed: string;
-  source: "expert-rules" | "groq-llm";
+  source: "expert-rules" | "groq-llm" | "puter-llm";
 }
 
 export function generateClinicalResponse(
@@ -18,163 +19,198 @@ export function generateClinicalResponse(
   ctx?: LiveAirQualityContext,
   lang: string = "en"
 ): ClinicalResponse {
-  const q = query.toLowerCase().trim();
+  const rawQ = query.trim();
+  const q = rawQ.toLowerCase();
+
   const aqi = ctx?.aqi ?? 325;
   const aqiCat = ctx?.category ?? "Very Poor";
   const pm25 = ctx?.pm25 ? Math.round(ctx.pm25) : 165;
+  const pm10 = ctx?.pm10 ? Math.round(ctx.pm10) : 280;
   const pbl = ctx?.pblHeightM ? Math.round(ctx.pblHeightM) : 250;
   const invDt = ctx?.inversionDeltaT ? ctx.inversionDeltaT.toFixed(1) : "2.1";
+  const cigEquiv = (pm25 / 22).toFixed(1);
 
-  // Category detection
-  const isAsthma = q.includes("asthma") || q.includes("inhaler") || q.includes("copd") || q.includes("bronch") || q.includes("अस्थमा") || q.includes("दमा") || q.includes("इनहेलर") || q.includes("ஆஸ்துமா") || q.includes("இன்ஹேலர்");
-  const isMask = q.includes("mask") || q.includes("n95") || q.includes("surgical") || q.includes("cloth") || q.includes("kn95") || q.includes("ffp2") || q.includes("मास्क") || q.includes("सर्जिकल") || q.includes("முகக்கவசம்") || q.includes("மாஸ்க்");
-  const isOutdoor = q.includes("outdoor") || q.includes("walk") || q.includes("run") || q.includes("workout") || q.includes("exercise") || q.includes("safest time") || q.includes("hours") || q.includes("बाहर") || q.includes("टहलने") || q.includes("कसरत") || q.includes("நேரம்") || q.includes("உடற்பயிற்சி") || q.includes("வெளியில்");
-  const isPediatric = q.includes("child") || q.includes("baby") || q.includes("pediatric") || q.includes("kid") || q.includes("pregnan") || q.includes("बच्चे") || q.includes("गर्भवती") || q.includes("शिशु") || q.includes("குழந்தை") || q.includes("கர்ப்பிணி");
-  const isPurifier = q.includes("purifier") || q.includes("hepa") || q.includes("filter") || q.includes("cadr") || q.includes("room") || q.includes("indoor") || q.includes("प्यूरीफायर") || q.includes("फिल्टर") || q.includes("பியூரிஃபையர்") || q.includes("ஏர் ப்யூரிஃபையர்");
-  const isEmergency = q.includes("emergency") || q.includes("hospital") || q.includes("danger") || q.includes("red flag") || q.includes("chest pain") || q.includes("shortness of breath") || q.includes("आपात") || q.includes("अस्पताल") || q.includes("खतरा") || q.includes("அவசர") || q.includes("மருத்துவமனை");
-  const isSymptoms = q.includes("symptom") || q.includes("cough") || q.includes("throat") || q.includes("eye") || q.includes("burn") || q.includes("mucus") || q.includes("phlegm") || q.includes("खांसी") || q.includes("गले") || q.includes("आंख") || q.includes("जलन") || q.includes("இருமல்") || q.includes("தொண்டை") || q.includes("எரிச்சல்");
+  // ── INTENT & ENTITY EXTRACTION ───────────────────────────────────────────
+  const isGreeting = /^(hi|hello|hey|namaste|vanakkam|good\s*(morning|evening|afternoon)|who are you|help|नमस्ते|வணக்கம்)/i.test(q) || q.length < 5;
+  const isJoke = q.includes("joke") || q.includes("funny") || q.includes("chutkula") || q.includes("मजाक") || q.includes("जोक") || q.includes("நகைச்சுவை");
+  const isLeaveDelhi = q.includes("leave delhi") || q.includes("move away") || q.includes("shift from delhi") || q.includes("दिल्ली छोड़") || q.includes("டெல்லியை விட்டு");
+  const isCigarette = q.includes("cigarette") || q.includes("smoking") || q.includes("बीड़ी") || q.includes("सिगरेट") || q.includes("சிகரெட்");
+  const isSkinHair = q.includes("hair") || q.includes("skin") || q.includes("acne") || q.includes("face") || q.includes("बाल") || q.includes("त्वचा") || q.includes("கூந்தல்") || q.includes("தோல்");
+  const isFoodDiet = q.includes("food") || q.includes("diet") || q.includes("eat") || q.includes("drink") || q.includes("jaggery") || q.includes("gur") || q.includes("turmeric") || q.includes("tea") || q.includes("ginger") || q.includes("तुलसी") || q.includes("गुड़") || q.includes("हल्दी") || q.includes("काढ़ा") || q.includes("உணவு") || q.includes("வெல்லம்");
+  const isPlant = q.includes("plant") || q.includes("indoor plant") || q.includes("snake plant") || q.includes("areca") || q.includes("पौधे") || q.includes("செடி");
+  const isCricketSports = q.includes("cricket") || q.includes("football") || q.includes("badminton") || q.includes("sports") || q.includes("game") || q.includes("खेल") || q.includes("क्रिकेट") || q.includes("விளையாட்டு");
+  const isLocationSpecific = q.includes("anand vihar") || q.includes("noida") || q.includes("gurgaon") || q.includes("gurugram") || q.includes("dwarka") || q.includes("rohini") || q.includes("ghaziabad") || q.includes("faridabad") || q.includes("delhi") || q.includes("गाजियाबाद") || q.includes("नोएडा") || q.includes("नोएडा") || q.includes("நொய்டா");
+  const isAsthma = q.includes("asthma") || q.includes("inhaler") || q.includes("copd") || q.includes("bronch") || q.includes("salbutamol") || q.includes("budesonide") || q.includes("foracort") || q.includes("अस्थमा") || q.includes("दमा") || q.includes("इनहेलर") || q.includes("ஆஸ்துமா") || q.includes("இன்ஹேலர்");
+  const isMask = q.includes("mask") || q.includes("n95") || q.includes("surgical") || q.includes("cloth") || q.includes("kn95") || q.includes("ffp2") || q.includes("wash") || q.includes("reusable") || q.includes("मास्क") || q.includes("सर्जिकल") || q.includes("முகக்கவசம்") || q.includes("மாஸ்க்");
+  const isOutdoor = q.includes("outdoor") || q.includes("walk") || q.includes("run") || q.includes("workout") || q.includes("exercise") || q.includes("jog") || q.includes("gym") || q.includes("morning walk") || q.includes("safest time") || q.includes("hours") || q.includes("बाहर") || q.includes("टहलने") || q.includes("कसरत") || q.includes("நேரம்") || q.includes("உடற்பயிற்சி") || q.includes("வெளியில்");
+  const isPediatric = q.includes("child") || q.includes("baby") || q.includes("kid") || q.includes("school") || q.includes("pregnan") || q.includes("infant") || q.includes("बच्चे") || q.includes("गर्भवती") || q.includes("शिशु") || q.includes("स्कूल") || q.includes("குழந்தை") || q.includes("கர்ப்பிணி");
+  const isPurifier = q.includes("purifier") || q.includes("hepa") || q.includes("filter") || q.includes("cadr") || q.includes("dyson") || q.includes("philips") || q.includes("coway") || q.includes("room") || q.includes("indoor") || q.includes("प्यूरीफायर") || q.includes("फिल्टर") || q.includes("பியூரிஃபையர்") || q.includes("ஏர் ப்யூரிஃபையர்");
+  const isEmergency = q.includes("emergency") || q.includes("hospital") || q.includes("danger") || q.includes("red flag") || q.includes("chest pain") || q.includes("shortness of breath") || q.includes("heart") || q.includes("faint") || q.includes("आपात") || q.includes("अस्पताल") || q.includes("खतरा") || q.includes("अவசர") || q.includes("மருத்துவமனை");
+  const isSymptoms = q.includes("symptom") || q.includes("cough") || q.includes("throat") || q.includes("eye") || q.includes("burn") || q.includes("mucus") || q.includes("phlegm") || q.includes("headache") || q.includes("itch") || q.includes("खांसी") || q.includes("गले") || q.includes("आंख") || q.includes("जलन") || q.includes("सिरदर्द") || q.includes("இருமல்") || q.includes("தொண்டை") || q.includes("எரிச்சல்");
+  const isMeteorology = q.includes("inversion") || q.includes("stubble") || q.includes("parali") || q.includes("fire") || q.includes("smog") || q.includes("winter") || q.includes("wind") || q.includes("rain") || q.includes("पराली") || q.includes("धुंध") || q.includes("सर्दी") || q.includes("வானிலை");
 
   // ──────────────────────────────────────────────────────────────────────────
   // HINDI RESPONSES (हिन्दी)
   // ──────────────────────────────────────────────────────────────────────────
   if (lang === "hi") {
+    if (isGreeting) {
+      return {
+        modelUsed: "Clinical Intelligence Specialist (Delhi Air Brain)",
+        source: "expert-rules",
+        content: `नमस्ते! 👋 मैं आपका **दिल्ली-एनसीआर वायु गुणवत्ता एवं श्वसन स्वास्थ्य सहायक** हूँ।
+
+आज दिल्ली में हवा का हाल:
+- **लाइव AQI:** **${aqi}** (${aqiCat})
+- **PM2.5:** **${pm25} µg/m³**
+- **मिक्सिंग गहराई:** **${pbl}m**
+
+आप मुझसे सांस के लक्षणों, कसरत के सुरक्षित समय, N95 मास्क, HEPA प्यूरीफायर, घरेलू नुस्खों या विशिष्ट इलाकों (नोएडा, गुड़गांव, आनंद विहार आदि) के बारे में कोई भी प्रश्न पूछ सकते हैं। मैं आपकी क्या सहायता करूँ?`,
+      };
+    }
+
+    if (isJoke) {
+      return {
+        modelUsed: "Clinical Intelligence Specialist (Delhi Air Brain)",
+        source: "expert-rules",
+        content: `😄 **दिल्ली का मौसम और हवा:**
+
+*दिल्ली वाले अब सिगरेट पीना छोड़ रहे हैं, क्योंकि डॉक्टर ने कहा है: "फालतू पैसे क्यों खर्च कर रहे हो, बालकनी में खड़े होकर 5 गहरी सांसें ले लो, 2 सिगरेट का काम वैसे ही हो जाता है!"* 😅
+
+हंसी-मजाक अपनी जगह, लेकिन आज का **AQI ${aqi}** काफी गंभीर है। बाहर निकलते समय N95 मास्क जरूर पहनें!`,
+      };
+    }
+
+    if (isCigarette) {
+      return {
+        modelUsed: "Clinical Intelligence Specialist (Delhi Air Brain)",
+        source: "expert-rules",
+        content: `### 🚬 क्या दिल्ली की हवा सिगरेट पीने जैसी है?
+
+हाँ, बर्कले अर्थ (Berkeley Earth) के वैज्ञानिक मानक के अनुसार: **22 µg/m³ PM2.5 = 1 सिगरेट प्रतिदिन**।
+
+- दिल्ली में वर्तमान PM2.5 स्तर **${pm25} µg/m³** है।
+- इसका मतलब है कि आज 24 घंटे बिना मास्क के दिल्ली की खुली हवा में सांस लेना लगभग **${cigEquiv} सिगरेट पीने के बराबर** जहरीला धुआं और टॉक्सिन्स फेफड़ों में जमा कर रहा है।
+
+**बचाव:** घर में HEPA एयर प्यूरीफायर चलाएं और बाहर जाते समय केवल N95 मास्क ही लगाएं।`,
+      };
+    }
+
+    if (isFoodDiet) {
+      return {
+        modelUsed: "Clinical Intelligence Specialist (Delhi Air Brain)",
+        source: "expert-rules",
+        content: `### 🍵 फेफड़ों को प्रदूषण से बचाने वाले आहार और घरेलू उपाय
+
+प्रदूषण से फेफड़ों में होने वाले ऑक्सीडेटिव स्ट्रेस और सूजन को कम करने के लिए ये उपाय बेहद असरदार हैं:
+
+1. **गुड़ (Jaggery) और सोंठ:** रात को सोने से पहले थोड़ा सा देसी गुड़ खाएं। यह श्वसन तंत्र से धूल और पार्टिकुलेट कणों को बाहर निकालने में मदद करता है।
+2. **तुलसी, अदरक और काली मिर्च का काढ़ा:** इसमें मौजूद एंटी-इन्फ्लेमेटरी गुण श्वासनली की सूजन को कम करते हैं।
+3. **हल्दी वाला दूध (Curcumin):** रात में कच्ची हल्दी या हल्दी दूध पिएं, यह फेफड़ों की इम्युनिटी मजबूत करता है।
+4. **विटामिन C (आंवला, संतरा, नींबू):** फेफड़ों की कोशिकाओं को फ्री रेडिकल्स से बचाता है।
+5. **भरपूर पानी और गुनगुना काढ़ा:** दिनभर में 2.5-3 लीटर पानी पिएं ताकि बलगम पतला रहे और फेफड़े साफ होते रहें।`,
+      };
+    }
+
+    if (isCricketSports) {
+      return {
+        modelUsed: "Clinical Intelligence Specialist (Delhi Air Brain)",
+        source: "expert-rules",
+        content: `### 🏏 क्या आज बाहर क्रिकेट या स्पोर्ट्स खेलना सुरक्षित है?
+
+**सीधा उत्तर:** 🔴 **सुबह या देर शाम को बिल्कुल नहीं!**
+
+**कारण:** 
+- वर्तमान AQI **${aqi}** और PM2.5 **${pm25} µg/m³** है। 
+- दौड़ने या खेलने के दौरान हमारी सांस लेने की दर (Ventilation Rate) 6 L/min से बढ़कर 45-60 L/min हो जाती है। यानी आप सामान्य से **8 से 10 गुना ज्यादा जहरीले कण** सीधे फेफड़ों की गहराई में खींचते हैं।
+
+**यदि खेलना बहुत जरूरी हो:**
+- केवल **दोपहर 01:30 PM से 04:00 PM** के बीच खेलें, जब धूप के कारण मिक्सिंग लेयर ऊपर उठती है और प्रदूषण लगभग 40% कम रहता है।
+- मैच के बाद गुनगुने पानी की भाप लें और हाइड्रेटेड रहें।`,
+      };
+    }
+
+    if (isSkinHair) {
+      return {
+        modelUsed: "Clinical Intelligence Specialist (Delhi Air Brain)",
+        source: "expert-rules",
+        content: `### 🧖‍♀️ त्वचा और बालों पर प्रदूषण का असर व बचाव
+
+PM2.5 कण त्वचा के पोर्स (रोमछिद्रों) से 20 गुना छोटे होते हैं, जिससे वे चेहरे में घुसकर एक्ने, जलन और बालों का झड़ना बढ़ाते हैं:
+
+1. **डबल क्लींजिंग:** बाहर से आने के बाद हल्के फोमिंग क्लींजर से चेहरा धोएं ताकि सूक्ष्म कण निकल जाएं।
+2. **एंटीऑक्सीडेंट सीरम (Vitamin C / Niacinamide):** सुबह चेहरे पर लगाएं, यह प्रदूषण के खिलाफ ढाल बनाता है।
+3. **बालों को ढकें:** बाहर जाते समय स्कार्फ या कैप पहनें, और हफ्ते में 2-3 बार एंटी-पॉल्यूशन शैम्पू से धोएं।
+4. **आंखों के लिए:** दिन में 2 बार गुलाब जल या लुब्रिकेटिंग आई ड्रॉप्स डालें।`,
+      };
+    }
+
+    if (isLocationSpecific) {
+      return {
+        modelUsed: "Clinical Intelligence Specialist (Delhi Air Brain)",
+        source: "expert-rules",
+        content: `### 📍 दिल्ली-एनसीआर क्षेत्रीय विश्लेषण
+
+दिल्ली-एनसीआर में प्रदूषण का स्तर अलग-अलग इलाकों में भिन्न रहता है:
+- **आनंद विहार, वजीरपुर, जहांगीरपुरी:** भारी ट्रैफिक और उद्योगों के कारण AQI अक्सर 380-450 (Severe) रहता है।
+- **नोएडा / गाजियाबाद:** निर्माण धूल और लैंडफिल के कारण PM10 और PM2.5 काफी ऊंचे स्तर पर हैं।
+- **गुड़गांव / द्वारका:** खुली हवा और चौड़ी सड़कों के कारण स्थिति 10-15% अपेक्षाकृत बेहतर रहती है लेकिन फिर भी Poor/Very Poor श्रेणी में है।
+
+**परामर्श:** किसी भी खुले इलाके में सुबह 9 बजे से पहले वॉक करने से बचें।`,
+      };
+    }
+
     if (isAsthma) {
       return {
-        modelUsed: "AI Clinical Specialist (Live Telemetry)",
+        modelUsed: "Clinical Intelligence Specialist (Delhi Air Brain)",
         source: "expert-rules",
-        content: `### 🩺 दिल्ली की वर्तमान हवा (${aqi} AQI · ${aqiCat}) में अस्थमा एवं COPD दिशा-निर्देश
+        content: `### 🩺 अस्थमा एवं COPD दिशा-निर्देश (AQI ${aqi} · PM2.5 ${pm25} µg/m³)
 
-वर्तमान में PM2.5 का स्तर **${pm25} µg/m³** है और मिक्सिंग गहराई मात्र **${pbl}m** है, जिससे बारीक प्रदूषक कण सीधे फेफड़ों की ब्रोन्कियोल्स में प्रवेश कर सूजन बढ़ा सकते हैं।
-
-**आवश्यक सावधानियां एवं इनहेलर प्रबंधन:**
-1. **कंट्रोलर इनहेलर (ICS):** यदि आपके डॉक्टर ने ब्युडेसोनाइड (Budesonide) या फ्लूटिकासोन निर्धारित किया है, तो उसकी खुराक नियमित रखें। डॉक्टर की सलाह के बिना बंद न करें।
-2. **रिलीवर इनहेलर (Salbutamol):** आपातकालीन साल्बुटामोल इनहेलर हमेशा अपने पास रखें। बाहर निकलने से 15 मिनट पहले 1-2 पफ लेने पर डॉक्टर से परामर्श करें।
-3. **स्पेसर का अनिवार्य उपयोग:** MDI इनहेलर के साथ स्पेसर (Spacer) का उपयोग करें ताकि दवा मुंह में रुकने के बजाय सीधे फेफड़ों के निचले हिस्से तक पहुंचे।
-4. **पीक फ्लो मॉनिटरिंग (PEFR):** यदि आपका पीक एक्सपायरेटरी फ्लो सामान्य से 20% नीचे गिरता है, तो तुरंत डॉक्टर से संपर्क करें।
-5. **नेबुलाइज़र और स्टीम:** रात में सलाइन नेबुलाइजेशन या गर्म पानी की भाप श्वासनली से बलगम और प्रदूषक कणों को साफ करने में मदद करती है।`,
+1. **कंट्रोलर इनहेलर (Budesonide/Fluticasone):** खुराक का नियमित समय पर सेवन करें।
+2. **आपातकालीन इनहेलर (Salbutamol):** हमेशा अपनी जेब में रखें। बाहर निकलने से पहले डॉक्टर की सलाह से 1 पफ ले सकते हैं।
+3. **स्पेसर का इस्तेमाल:** इनहेलर के साथ स्पेसर लगाएं ताकि दवा सीधे फेफड़ों में पहुंचे।
+4. **स्टीम इनहेलेशन:** रात में गुनगुने पानी की भाप लें।`,
       };
     }
 
     if (isMask) {
       return {
-        modelUsed: "AI Clinical Specialist (Live Telemetry)",
+        modelUsed: "Clinical Intelligence Specialist (Delhi Air Brain)",
         source: "expert-rules",
-        content: `### 🛡️ मास्क तुलना: N95 बनाम साधारण व सर्जिकल मास्क
+        content: `### 🛡️ N95 मास्क की सही जानकारी
 
-दिल्ली की हवा में इस समय **PM2.5 स्तर ${pm25} µg/m³** है। ये कण इंसान के बाल से 30 गुना बारीक होते हैं।
-
-**1. कपड़े और सर्जिकल मास्क (असुरक्षित):**
-- **फिल्ट्रेशन क्षमता:** मात्र 10% – 25%।
-- **कमी:** ये मास्क किनारों से खुले होते हैं और PM2.5 जैसे माइक्रोस्कोपिक कणों को नहीं रोक पाते।
-
-**2. प्रमाणित N95 / FFP2 / KN95 मास्क (अत्यधिक अनुशंसित):**
-- **फिल्ट्रेशन क्षमता:** 0.3 माइक्रोन कणों पर **≥ 95% सुरक्षा**।
-- **इलेक्ट्रोस्टैटिक चार्ज:** इसमें पॉलीप्रोपाइलीन मेल्ट-ब्लोन फाइबर होते हैं जो हानिकारक जहरीले कणों को फेफड़ों में जाने से रोकते हैं।
-
-**उचित उपयोग के नियम:**
-- नाक की मेटल स्ट्रिप को अच्छे से दबाएं ताकि सील पूरी तरह एयरटाइट रहे।
-- यदि सांस लेने में भारीपन लगे या मास्क गीला हो जाए (आमतौर पर 40-50 घंटे के उपयोग बाद), तो नया मास्क उपयोग करें।`,
-      };
-    }
-
-    if (isOutdoor) {
-      return {
-        modelUsed: "AI Clinical Specialist (Live Telemetry)",
-        source: "expert-rules",
-        content: `### ⏱️ अगले 24-48 घंटे में बाहर जाने और कसरत का सबसे सुरक्षित समय
-
-दिल्ली में वायुमंडलीय तापमान इनवर्जन (ΔT: **+${invDt}°C**) और कम मिक्सिंग गहराई (**${pbl}m**) के कारण प्रदूषण जमीन के पास कैद है।
-
-**समय सारिणी:**
-- 🔴 **सुबह 05:00 AM – 09:30 AM (अत्यधिक खतरनाक):** सतह पर ठंड और रात का जमावड़ा प्रदूषण को अधिकतम स्तर (AQI 380+) पर रखता है। जॉगिंग या वॉक बिल्कुल न करें।
-- 🟢 **दोपहर 01:00 PM – 04:30 PM (सबसे सुरक्षित विंडो):** सौर विकिरण से मिक्सिंग लेयर ऊपर उठती है और प्रदूषण लगभग 40% तक कम हो जाता है। आवश्यक बाहरी कार्य इसी समय करें।
-- 🔴 **शाम 07:00 PM के बाद (खतरनाक):** तापमान गिरने के साथ इनवर्जन लिड दोबारा सक्रिय हो जाती है।
-
-**सुझाव:** जॉगिंग या उच्च तीव्रता वाले कार्डियो व्यायाम को घर के अंदर करें और बाहर निकलते समय हमेशा N95 मास्क पहनें।`,
-      };
-    }
-
-    if (isPediatric) {
-      return {
-        modelUsed: "AI Clinical Specialist (Live Telemetry)",
-        source: "expert-rules",
-        content: `### 👶 बच्चों एवं गर्भवती महिलाओं के लिए विशेष स्वास्थ्य परामर्श
-
-वर्तमान **PM2.5 सांद्रता (${pm25} µg/m³)** वयस्कों की तुलना में बच्चों और भ्रूण के लिए 3 गुना अधिक संवेदनशील है।
-
-**बच्चों के लिए जोखिम एवं बचाव:**
-1. बच्चों की सांस लेने की दर (Ventilation Rate) वयस्कों से दोगुनी होती है, जिससे वे अधिक टॉक्सिन सांस में लेते हैं।
-2. सुबह 9 बजे से पहले स्कूल या पार्क में खुली शारीरिक गतिविधियों को बंद रखें।
-3. खांसी, घरघराहट (Wheezing) या आंखों में लाली होने पर तुरंत बाल रोग विशेषज्ञ को दिखाएं।
-
-**गर्भवती महिलाओं के लिए सुरक्षा:**
-1. नैनोपार्टिकल्स प्लेसेंटा को पार कर भ्रूण के विकास और जन्म वजन को प्रभावित कर सकते हैं।
-2. हमेशा बंद कमरे में HEPA एयर प्यूरीफायर चालू रखें।
-3. बाहर निकलते समय अच्छी फिटिंग वाला N95 मास्क पहनना अनिवार्य है।`,
+- **क्या N95 दोबारा उपयोग हो सकता है?** हाँ! इसे धोने के बजाय धूप या सूखी हवादार जगह पर 48 घंटे रखें। एक N95 मास्क 40-50 घंटे तक उपयोग किया जा सकता है।
+- **कपड़े का मास्क क्यों बेकार है?** कपड़े के मास्क के छेद 20-50 माइक्रोन होते हैं, जबकि PM2.5 कण 2.5 माइक्रोन से छोटे होते हैं और सीधे अंदर चले जाते हैं।
+- **N95 की पहचान:** प्रमाणित N95/FFP2 पर ISI/NIOSH का मार्क होता है और नाक पर मेटल क्लिप होती है।`,
       };
     }
 
     if (isPurifier) {
       return {
-        modelUsed: "AI Clinical Specialist (Live Telemetry)",
+        modelUsed: "Clinical Intelligence Specialist (Delhi Air Brain)",
         source: "expert-rules",
-        content: `### 🌀 HEPA एयर प्यूरीफायर की सही सेटिंग्स एवं कमरे की सीलिंग
+        content: `### 🌀 HEPA एयर प्यूरीफायर की सही सेटिंग्स
 
-कमरे में वायु गुणवत्ता को सुरक्षित स्तर (AQI < 50) पर रखने के लिए निम्नलिखित तरीके अपनाएं:
-
-1. **फिल्टर का प्रकार:** सुनिश्चित करें कि प्यूरीफायर में **सच्चा True HEPA H13** फिल्टर और भारी एक्टिवेटेड कार्बन पैलेट लगे हों।
-2. **पंखा गति (Fan Speed):** शाम और रात में प्यूरीफायर को **High / Turbo Mode** पर चलाएं। सिर्फ 'Auto' मोड पर निर्भर न रहें क्योंकि वे अक्सर कम गति पर चलते हैं।
-3. **कमरे की सीलिंग:** खिड़कियों और दरवाजों के नीचे वेदर-स्ट्रिप या गीला तौलिया लगाएं ताकि बाहरी धुआं अंदर न आए।
-4. **CADR और प्लेसमेंट:** प्यूरीफायर को दीवार से कम से कम 1 फीट दूर और कमरे के बीच में या बिस्तर के पास रखें।
-5. **प्री-फिल्टर सफाई:** हर 15 दिन में बाहरी मेश प्री-फिल्टर को वैक्यूम या धोकर साफ करें।`,
+1. **मोड:** शाम और रात को प्यूरीफायर **High / Turbo Mode** पर चलाएं। केवल 'Auto' मोड पर न छोड़ें।
+2. **कमरे की सीलिंग:** दरवाजे के नीचे तौलिया या सील लगाएं।
+3. **सच्चा HEPA (H13):** सुनिश्चित करें कि फिल्टर True HEPA H13 हो।
+4. **पौधों से तुलना:** स्नेक प्लांट और मनी प्लांट घर को सुंदर बनाते हैं, लेकिन PM2.5 को साफ करने के लिए केवल मैकेनिकल HEPA फिल्टर ही काम करता है।`,
       };
     }
 
-    if (isEmergency) {
-      return {
-        modelUsed: "AI Clinical Specialist (Live Telemetry)",
-        source: "expert-rules",
-        content: `### 🚨 आपातकालीन खतरे के लक्षण (Emergency Red Flags)
-
-यदि वायु प्रदूषण के कारण निम्नलिखित में से कोई भी लक्षण दिखाई दे, तो तुरंत **102 / 112** पर कॉल करें या नजदीकी आपातकालीन अस्पताल जाएं:
-
-1. **तीव्र सांस फूलना:** आराम करते समय या बोलते समय सांस लेने में अत्यधिक कठिनाई होना।
-2. **सीने में दबाव या दर्द:** सीने में जकड़न, भारीपन या बाएं हाथ/जबड़े की ओर फैलता दर्द (हार्ट अटैक का खतरा)।
-3. **सायनोसिस (Cyanosis):** होंठ, जीभ या उंगलियों के नाखूनों का नीला या धूसर पड़ना (ऑक्सीजन की भारी कमी, SpO2 < 90%)।
-4. **लगातार घरघराहट:** इनहेलर के 3-4 पफ लेने के बाद भी सांस की सीटी या घरघराहट ठीक न होना।
-5. **चक्कर आना या बेहोशी:** गंभीर हाइपोक्सिया या कार्बन मोनोऑक्साइड के प्रभाव के कारण भ्रम या बेहोशी।`,
-      };
-    }
-
-    if (isSymptoms) {
-      return {
-        modelUsed: "AI Clinical Specialist (Live Telemetry)",
-        source: "expert-rules",
-        content: `### 🌿 वायु प्रदूषण के आम लक्षणों का क्लीनिकल प्रबंधन
-
-वर्तमान AQI (${aqi}) में रासायनिक गैसों और PM2.5 के कारण होने वाले लक्षणों का प्राथमिक उपचार:
-
-- **गले में खराश और सूखी खांसी:** दिन में 2 बार हल्के गुनगुने नमक के पानी से गरारे करें। शहद और अदरक का काढ़ा श्वासनली की सूजन कम करता है।
-- **आंखों में जलन और लाली:** आंखों को बार-बार न रगड़ें। प्रिजर्वेटिव-फ्री लुब्रिकेटिंग आई ड्रॉप्स (जैसे Carboxymethylcellulose 0.5%) का उपयोग करें।
-- **नाक बंद व सिरदर्द:** सलाइन नेज़ल स्प्रे (Saline Nasal Spray) से प्रदूषक कणों को साफ करें और पर्याप्त पानी पिएं।`,
-      };
-    }
-
-    // Default general response in Hindi
+    // Dynamic contextual Hindi fallback
     return {
-      modelUsed: "AI Clinical Specialist (Live Telemetry)",
+      modelUsed: "Clinical Intelligence Specialist (Delhi Air Brain)",
       source: "expert-rules",
-      content: `### 📋 दिल्ली-एनसीआर स्वास्थ्य एवं वायु गुणवत्ता विश्लेषण
+      content: `### 💡 आपके प्रश्न का सीधा उत्तर (वर्तमान AQI: ${aqi} · ${aqiCat})
 
-- **वर्तमान AQI:** **${aqi}** (${aqiCat})
-- **PM2.5 सांद्रता:** **${pm25} µg/m³** (WHO सुरक्षित सीमा 15 µg/m³ से लगभग ${Math.round(pm25 / 15)} गुना अधिक)
-- **वायुमंडलीय मिक्सिंग गहराई:** **${pbl} मीटर**
+आपने जो पूछा है, उसके संबंध में वर्तमान दिल्ली वायुमंडल को ध्यान में रखते हुए मुख्य बातें:
 
-**महत्वपूर्ण सिफारिशें:**
-1. बाहर जाते समय केवल **N95 या FFP2 रेस्पिरेटर** का उपयोग करें।
-2. सुबह और देर रात खुली हवा में कसरत करने से बचें; दोपहर 1 से 4 बजे के बीच हवा अपेक्षाकृत बेहतर रहती है।
-3. घर के अंदर HEPA प्यूरीफायर चालू रखें और खिड़कियां बंद रखें।
-4. यदि आप किसी विशिष्ट लक्षण, इनहेलर या दवा के बारे में पूछना चाहते हैं, तो कृपया विस्तार से बताएं।`,
+1. **हवा की स्थिति:** अभी PM2.5 का स्तर **${pm25} µg/m³** है और मिक्सिंग गहराई **${pbl} मीटर** है। प्रदूषण काफी सघन है।
+2. **सावधानी:** बाहर जाते समय **N95 मास्क** का उपयोग अनिवार्य रखें।
+3. **सुरक्षित समय:** यदि कोई काम बाहर करना हो, तो दोपहर 1 से 4 बजे के बीच करें।
+4. **घर के अंदर:** कमरे को बंद रखकर एयर प्यूरीफायर चालू रखें और गुनगुना पानी या तुलसी-अदरक का काढ़ा पिएं।
+
+यदि आप किसी खास लक्षण, दवा, इलाके या गतिविधि के बारे में और गहराई से जानना चाहते हैं, तो कृपया पूछें!`,
     };
   }
 
@@ -182,202 +218,300 @@ export function generateClinicalResponse(
   // TAMIL RESPONSES (தமிழ்)
   // ──────────────────────────────────────────────────────────────────────────
   if (lang === "ta") {
-    if (isAsthma) {
+    if (isGreeting) {
       return {
-        modelUsed: "AI Clinical Specialist (Live Telemetry)",
+        modelUsed: "Clinical Intelligence Specialist (Delhi Air Brain)",
         source: "expert-rules",
-        content: `### 🩺 டெல்லியின் காற்றுத் தரத்தில் (${aqi} AQI · ${aqiCat}) ஆஸ்துமா வழிகாட்டுதல்
+        content: `வணக்கம்! 👋 நான் உங்கள் **டெல்லி-என்சிஆர் காற்றுத் தரம் மற்றும் சுவாச சுகாதார உதவியாளர்**.
 
-தற்போதைய **PM2.5 அளவு ${pm25} µg/m³** மற்றும் கலவை ஆழம் **${pbl}m** மட்டுமே உள்ளதால், நுண்துகள்கள் மூச்சுக்குழாய்களில் வீக்கத்தை ஏற்படுத்தும்.
+இன்றைய டெல்லி காற்று நிலை:
+- **AQI:** **${aqi}** (${aqiCat})
+- **PM2.5:** **${pm25} µg/m³**
+- **கலவை அடுக்கு:** **${pbl}m**
 
-**முக்கிய முன்னெச்சரிக்கைகள்:**
-1. **இன்ஹேலர் தொடர்ச்சி:** மருத்துவர் பரிந்துரைத்த Budesonide அல்லது Fluticasone இன்ஹேலர்களைத் தவறாமல் பயன்படுத்தவும்.
-2. **அவசர இன்ஹேலர் (Salbutamol):** அவசர தேவைக்கான சல்புடமால் இன்ஹேலரை எப்போதும் உடன் வைத்திருக்கவும்.
-3. **ஸ்பேசர் (Spacer) பயன்பாடு:** மருந்து நுரையீரலின் ஆழமான பகுதிக்குச் செல்ல ஸ்பேசர் கருவியைப் பயன்படுத்தவும்.
-4. **சூடான நீராவி:** இரவில் வெந்நீர் ஆவி பிடிப்பது மூச்சுக்குழாயில் படிந்த மாசுகளை அகற்ற உதவும்.`,
+சுவாச அறிகுறிகள், உடற்பயிற்சி நேரங்கள், N95 முகக்கவசம், ஏர் ப்யூரிஃபையர் அல்லது வீட்டு வைத்தியம் பற்றி என்னிடம் எந்த கேள்வியும் கேட்கலாம். நான் உங்களுக்கு எவ்வாறு உதவட்டும்?`,
       };
     }
 
-    if (isMask) {
+    if (isFoodDiet) {
       return {
-        modelUsed: "AI Clinical Specialist (Live Telemetry)",
+        modelUsed: "Clinical Intelligence Specialist (Delhi Air Brain)",
         source: "expert-rules",
-        content: `### 🛡️ முகக்கவச ஒப்பீடு: N95 vs துணி/சர்ஜிகல் மாஸ்க்
+        content: `### 🍵 நுரையீரலை பாதுகாக்கும் உணவுகள் மற்றும் வீட்டு வைத்தியம்
 
-டெல்லியில் **PM2.5 அளவு ${pm25} µg/m³** ஆக உள்ளது.
-
-1. **துணி மற்றும் சர்ஜிகல் மாஸ்க்:** 15% – 25% மட்டுமே வடிகட்டும்; நுண்ணிய PM2.5 துகள்களைத் தடுக்க இயலாது.
-2. **சான்றளிக்கப்பட்ட N95 / FFP2 மாஸ்க்:** **95% க்கும் அதிகமான** நுண்ணிய துகள்களை வடிகட்டி நுரையீரலைப் பாதுகாக்கும்.
-3. **பயன்பாட்டு முறை:** முகத்தில் காற்று கசியாதவாறு இறுக்கமாகப் பொருத்தவும்.`,
-      };
-    }
-
-    if (isOutdoor) {
-      return {
-        modelUsed: "AI Clinical Specialist (Live Telemetry)",
-        source: "expert-rules",
-        content: `### ⏱️ உடற்பயிற்சி மற்றும் வெளியில் செல்ல பாதுகாப்பான நேரம்
-
-டெல்லியில் தலைகீழ் காற்று அடுக்கு (Inversion ΔT: **+${invDt}°C**) காரணமாக மாசு தரைமட்டத்தில் தேங்கியுள்ளது.
-
-- 🔴 **காலை 05:00 – 09:30 (மிக ஆபத்தானது):** பனி மற்றும் தரைக்குளிர்வு காரணமாக மாசு உச்சத்தில் இருக்கும். வெளியில் ஓடுவதைத் தவிர்க்கவும்.
-- 🟢 **பிற்பகல் 01:00 – 04:30 (பாதுகாப்பான நேரம்):** சூரிய வெப்பத்தால் காற்று மேல்நோக்கி நகர்ந்து மாசு 40% குறையும்.
-- 🔴 **இரவு 07:00 மணிக்குப் பிறகு:** மீண்டும் மாசு அதிகரிக்கும்.`,
+1. **வெல்லம் மற்றும் சுக்கு:** இரவு தூங்கும் முன் சிறிதளவு வெல்லம் சாப்பிடுவது மூச்சுக்குழாயில் படிந்த மாசுகளை அகற்ற உதவும்.
+2. **துளசி, இஞ்சி, மிளகு கஷாயம்:** மூச்சுக்குழாய் வீக்கத்தைக் குறைக்க உதவும்.
+3. **மஞ்சள் பால்:** நோய் எதிர்ப்புச் சக்தியை அதிகரிக்கும்.
+4. **நிறைய தண்ணீர் குடிக்கவும்:** சளியை இளக்கி வெளியேற்ற தினமும் 2.5–3 லிட்டர் வெதுவெதுப்பான நீர் அருந்தவும்.`,
       };
     }
 
     return {
-      modelUsed: "AI Clinical Specialist (Live Telemetry)",
+      modelUsed: "Clinical Intelligence Specialist (Delhi Air Brain)",
       source: "expert-rules",
-      content: `### 📋 டெல்லி-NCR சுகாதார ஆலோசனை & காற்றுத் தரம்
+      content: `### 💡 உங்கள் கேள்விக்கான நேரடி விளக்கம் (AQI: ${aqi} · ${aqiCat})
 
-- **தற்போதைய AQI:** **${aqi}** (${aqiCat})
-- **PM2.5 அளவு:** **${pm25} µg/m³**
-- **கலவை அடுக்கு ஆழம்:** **${pbl} மீ**
+டெல்லியின் தற்போதைய காற்றுத் தரத்தை கருத்தில் கொண்டு:
+1. **PM2.5 அளவு:** **${pm25} µg/m³** ஆக உள்ளது.
+2. **பாதுகாப்பு:** வெளியில் செல்லும்போது கட்டாயம் **N95 முகக்கவசம்** அணியவும்.
+3. **பாதுகாப்பான நேரம்:** வெளியில் செல்ல வேண்டியிருந்தால் பிற்பகல் 01:00 முதல் 04:00 மணிக்குள் செல்லவும்.
+4. **வீட்டிற்குள்:** HEPA ஏர் ப்யூரிஃபையரை இயக்கி, கதவு ஜன்னல்களை மூடி வைக்கவும்.
 
-**பரிந்துரைகள்:**
-1. வெளியில் செல்லும்போது **N95 முகக்கவசம்** அணியவும்.
-2. அதிகாலை நேர உடற்பயிற்சிகளைத் தவிர்த்து வீட்டிற்குள்ளேயே உடற்பயிற்சி செய்யவும்.
-3. படுக்கையறையில் HEPA ஏர் பியூரிஃபையரைப் பயன்படுத்தவும்.`,
+மேலும் விவரங்களுக்கு உங்கள் சந்தேகங்களை கேட்கலாம்!`,
     };
   }
 
   // ──────────────────────────────────────────────────────────────────────────
   // ENGLISH RESPONSES
   // ──────────────────────────────────────────────────────────────────────────
+  if (isGreeting) {
+    return {
+      modelUsed: "Clinical Intelligence Specialist (Delhi Air Brain)",
+      source: "expert-rules",
+      content: `Hello! 👋 I am your **Delhi NCR Health Care Assistant & Clinical Air Quality Specialist**.
+
+**Today's Atmospheric Status:**
+- **Live AQI:** **${aqi}** (${aqiCat})
+- **PM2.5:** **${pm25} µg/m³** (${Math.round(pm25 / 15)}× WHO Safe Limit)
+- **Mixing Depth:** **${pbl} meters** (Thermal Inversion ΔT: +${invDt}°C)
+
+Feel free to ask me anything—whether it's about safe workout hours, asthma/inhaler care, N95 masks, HEPA purifiers, diet remedies, specific neighborhoods (Noida, Gurgaon, Anand Vihar), or outside-the-box health questions. How can I help you today?`,
+    };
+  }
+
+  if (isJoke) {
+    return {
+      modelUsed: "Clinical Intelligence Specialist (Delhi Air Brain)",
+      source: "expert-rules",
+      content: `😄 **A classic Delhi air reality check:**
+
+*A doctor in Delhi told his patient: "You need to stop spending money on cigarettes. Just open your window in the morning, take 5 deep breaths, and you've smoked half a pack for free!"* 😅
+
+Jokes aside, with today's **AQI at ${aqi} (${aqiCat})**, please ensure you wear a certified N95 respirator whenever stepping outside!`,
+    };
+  }
+
+  if (isCigarette) {
+    return {
+      modelUsed: "Clinical Intelligence Specialist (Delhi Air Brain)",
+      source: "expert-rules",
+      content: `### 🚬 Is breathing Delhi air today like smoking cigarettes?
+
+Yes, according to the peer-reviewed **Berkeley Earth particulate equivalence standard** (where **22 µg/m³ of PM2.5 in 24 hours ≈ 1 cigarette**):
+
+- Delhi's live PM2.5 concentration is **${pm25} µg/m³**.
+- Breathing today's unfiltered outdoor air for 24 hours is mathematically equivalent to smoking approximately **${cigEquiv} cigarettes per day** in terms of alveolar micro-toxin deposition and systemic oxidative stress.
+
+**Clinical Mitigation:** Keep windows sealed, run True HEPA filtration indoors, and always wear a sealed N95 respirator outdoors.`,
+    };
+  }
+
+  if (isFoodDiet) {
+    return {
+      modelUsed: "Clinical Intelligence Specialist (Delhi Air Brain)",
+      source: "expert-rules",
+      content: `### 🍵 Pulmonary Detox & Nutritional Support Against Air Pollution
+
+While no food can replace an N95 mask, clinical research confirms that specific antioxidants help neutralize reactive oxygen species (ROS) in lung tissue:
+
+1. **Jaggery (Gur) & Dry Ginger:** Consumed after dinner, jaggery stimulates mucociliary clearance in the upper respiratory tract.
+2. **Turmeric (Curcumin) with Warm Milk:** Potent anti-inflammatory agent that mitigates bronchial inflammation.
+3. **Tulsi, Ginger & Black Pepper Decoction (Kadha):** Helps clear mucosal congestion and soothe pharyngeal irritation.
+4. **Vitamin C & E Rich Foods (Amla, Citrus, Almonds):** Reinforce cellular antioxidant defenses against ozone and NO2 damage.
+5. **Hydration (2.5–3L daily):** Keeps bronchial secretions thin and facilitates normal ciliary particulate expulsion.`,
+    };
+  }
+
+  if (isCricketSports) {
+    return {
+      modelUsed: "Clinical Intelligence Specialist (Delhi Air Brain)",
+      source: "expert-rules",
+      content: `### 🏏 Can you play cricket, football, or outdoor sports today?
+
+**Direct Clinical Verdict:** 🔴 **Avoid early morning and late evening sports!**
+
+**Why:**
+- At **${aqi} AQI** and **${pm25} µg/m³ PM2.5**, high-intensity cardiovascular activity elevates human ventilation rate from ~6 L/min (resting) to **45–70 L/min**.
+- Because athletes breathe heavily through the mouth, the nasal filtration barrier is bypassed, depositing **10× more toxic particulates** directly into alveolar sacs.
+
+**If you must play:**
+- Schedule games between **01:30 PM and 04:30 PM**, when solar heating expands the planetary boundary layer, reducing surface pollution density by ~35%–40%.
+- Ensure immediate warm saline gargles and hydration post-match.`,
+    };
+  }
+
+  if (isSkinHair) {
+    return {
+      modelUsed: "Clinical Intelligence Specialist (Delhi Air Brain)",
+      source: "expert-rules",
+      content: `### 🧖‍♀️ Impact of Air Pollution on Skin & Hair Health
+
+PM2.5 particles are approximately 20 times smaller than human skin pores, penetrating the stratum corneum and accelerating lipid peroxidation:
+
+1. **Double Cleansing:** Wash face with an oil-based cleanser followed by a gentle foaming wash immediately upon returning home.
+2. **Antioxidant Barriers (Vitamin C / Niacinamide):** Apply a topical antioxidant serum in the morning under sunscreen to scavenge smog free radicals.
+3. **Hair Protection:** Cover hair with a scarf or cap during outdoor transit to prevent particulate adhesion, which causes follicular inflammation and hair thinning.
+4. **Eye Care:** Use preservative-free artificial tear drops (Carboxymethylcellulose 0.5%) twice daily to soothe pollutant-induced dry eye syndrome.`,
+    };
+  }
+
+  if (isLocationSpecific) {
+    return {
+      modelUsed: "Clinical Intelligence Specialist (Delhi Air Brain)",
+      source: "expert-rules",
+      content: `### 📍 Delhi-NCR Regional Air Quality Variations
+
+Pollutant dispersion varies considerably across the National Capital Region:
+- **Anand Vihar, Jahangirpuri & Wazirpur:** Chronic industrial and interstate bus transit hubs frequently push AQI above 400 (Severe).
+- **Noida & Ghaziabad:** High construction dust combined with peripheral brick kilns elevate both PM10 and PM2.5.
+- **Gurugram & Dwarka:** Broader arterial layout and open buffers often record 10%–15% lower particulate density, yet remain solidly in the 'Very Poor' tier during winter inversion.
+
+**Advice:** Regardless of neighborhood, restrict strenuous outdoor exercise until afternoon dispersion.`,
+    };
+  }
+
+  if (isPlant) {
+    return {
+      modelUsed: "Clinical Intelligence Specialist (Delhi Air Brain)",
+      source: "expert-rules",
+      content: `### 🪴 Can indoor plants replace an air purifier for PM2.5?
+
+**Direct Answer:** **No, plants cannot clean PM2.5.**
+
+- **What plants do:** NASA clean air studies showed that plants (Snake Plant, Areca Palm, Peace Lily) can absorb modest amounts of volatile organic compounds (VOCs) like benzene and formaldehyde over many days.
+- **What plants cannot do:** Plants cannot filter microscopic aerosols or PM2.5 particulates (${pm25} µg/m³ today).
+- **Recommendation:** Enjoy houseplants for aesthetic and humidity benefits, but rely on a **True HEPA H13 mechanical air purifier** for actual particle filtration.`,
+    };
+  }
+
+  if (isLeaveDelhi) {
+    return {
+      modelUsed: "Clinical Intelligence Specialist (Delhi Air Brain)",
+      source: "expert-rules",
+      content: `### ✈️ Considering moving away or taking a clean-air break?
+
+Delhi NCR's severe winter pollution is driven by a geographic basin effect (Indo-Gangetic Plain), low wind speeds, and strong nocturnal thermal inversions that trap surface emissions.
+
+- For individuals with severe COPD, intractable asthma, or high-risk cardiac conditions, taking a 2–3 week reprieve to coastal or high-altitude regions (Western Ghats, Goa, Himachal) during peak November–January inversion significantly reduces systemic inflammatory biomarkers.
+- If staying in Delhi, maintaining an airtight indoor sanctuary with True HEPA purifiers and N95 masks reduces your inhaled particulate dosage by over 80%.`,
+    };
+  }
+
   if (isAsthma) {
     return {
-      modelUsed: "AI Clinical Specialist (Live Telemetry)",
+      modelUsed: "Clinical Intelligence Specialist (Delhi Air Brain)",
       source: "expert-rules",
-      content: `### 🩺 Asthma & COPD Clinical Management for Today's Air (${aqi} AQI · ${aqiCat})
+      content: `### 🩺 Asthma & COPD Guidelines for Current Conditions (AQI ${aqi} · PM2.5 ${pm25} µg/m³)
 
-Given Delhi's live **PM2.5 concentration of ${pm25} µg/m³** and a restricted mixing depth of **${pbl}m**, fine particulates penetrate deep into the terminal bronchioles, triggering bronchospasm and hyperreactivity.
-
-**Immediate Clinical Adjustments:**
-1. **Controller Medication (ICS/LABA):** Strictly adhere to your prescribed inhaled corticosteroid (e.g., Budesonide/Formoterol or Fluticasone). Do not taper without clinical oversight.
-2. **Rescue Inhaler (Salbutamol/Albuterol):** Keep your fast-acting bronchodilator readily accessible. Pre-treatment with 2 puffs before mandatory transit can mitigate acute bronchospasm.
-3. **Use a Valved Holding Chamber (Spacer):** Ensures optimal deposition in the peripheral airways rather than the oropharynx.
-4. **Peak Expiratory Flow (PEFR) Baseline:** Measure twice daily. If readings drop below 80% of your personal best, initiate your asthma action plan.
-5. **Warm Saline Steam Nebulization:** Helps liquefy tenacious airway secretions and soothe inflamed tracheal mucosa.`,
+1. **Controller Inhaler (ICS):** Maintain your daily prescribed Budesonide/Fluticasone regimen. Never discontinue without physician advice.
+2. **Rescue Inhaler (Salbutamol):** Keep your fast-acting bronchodilator on your person at all times.
+3. **Use a Spacer Device:** Ensures medication reaches deep alveolar airways rather than settling in the throat.
+4. **Warm Saline Steam Nebulization:** Helps liquefy stubborn airway mucus and soothe bronchial spasms.`,
     };
   }
 
   if (isMask) {
     return {
-      modelUsed: "AI Clinical Specialist (Live Telemetry)",
+      modelUsed: "Clinical Intelligence Specialist (Delhi Air Brain)",
       source: "expert-rules",
-      content: `### 🛡️ Respirator Protection: Certified N95 vs Surgical & Cloth Masks
+      content: `### 🛡️ N95 Respirator Best Practices
 
-Delhi's current particulate burden is heavily dominated by **PM2.5 (${pm25} µg/m³)**—microscopic particles with an aerodynamic diameter under 2.5 µm.
-
-**Performance Breakdown:**
-- **Cloth & Surgical Masks (Ineffective):** Only provide 10%–25% fractional filtration against sub-micron aerosols due to loose facial perimeter fit and woven pore size exceeding 20 µm.
-- **Certified N95 / FFP2 / KN95 Respirators (Highly Effective):** Deliver **≥ 95% filtration efficiency** against 0.3 µm NaCl test aerosols using electrostatically charged melt-blown polypropylene fibers.
-
-**Best Practices for Use:**
-1. Ensure an airtight seal by molding the adjustable nose clip firmly over the nasal bridge.
-2. Perform a user seal check (inhale and exhale sharply to ensure no air leaks around the cheeks).
-3. Replace respirators after 40–50 cumulative hours of use or if breathing resistance noticeably increases.`,
-    };
-  }
-
-  if (isOutdoor) {
-    return {
-      modelUsed: "AI Clinical Specialist (Live Telemetry)",
-      source: "expert-rules",
-      content: `### ⏱️ Optimal Outdoor Activity & Workout Window for the Next 24–48 Hours
-
-Delhi's atmospheric boundary layer is currently experiencing thermal capping (Inversion ΔT: **+${invDt}°C**) and compressed vertical mixing (**${pbl}m**).
-
-**Daily Window Optimization:**
-- 🔴 **05:00 AM – 09:30 AM (Extremely High Risk):** Nocturnal radiative cooling traps combustion exhaust and biomass particulates directly against the surface. Avoid all outdoor jogging, cycling, or brisk walks.
-- 🟢 **01:00 PM – 04:30 PM (Safest Daily Window):** Solar insolation deepens the convective planetary boundary layer, diluting pollutant concentrations by up to 35%–45%. Schedule necessary errands during this window.
-- 🔴 **07:00 PM – Midnight (Elevated Hazard):** Surface inversion layer re-forms, concentrating traffic and industrial emissions.
-
-**Clinical Recommendation:** Transition intense cardio workouts indoors and maintain closed-loop indoor filtration.`,
-    };
-  }
-
-  if (isPediatric) {
-    return {
-      modelUsed: "AI Clinical Specialist (Live Telemetry)",
-      source: "expert-rules",
-      content: `### 👶 Pediatric & Pregnancy Health Risks and Protection Guidelines
-
-Current PM2.5 levels of **${pm25} µg/m³** represent a substantial health hazard for developing lungs and maternal-fetal circulation.
-
-**Pediatric Vulnerabilities:**
-1. Children breathe up to 50% more air per pound of body weight than adults, depositing a higher mass of heavy metals and polycyclic aromatic hydrocarbons (PAHs) into developing alveoli.
-2. Keep children indoors during early morning school hours. Recess and sports should be moved indoors.
-3. Watch for early indicators of airway distress: persistent night coughing, tachypnea, or intercostal retractions.
-
-**Maternal & Fetal Protection:**
-1. Translocated ultrafine particles (< 0.1 µm) can cross the placental barrier and induce systemic oxidative stress.
-2. Ensure continuous bedroom HEPA filtration (CADR matched to room volume).
-3. Always wear a fitted N95 respirator during outdoor transit.`,
+- **Is N95 reusable?** Yes! Do NOT wash it. Store it in a dry paper bag for 48 hours between uses. A single N95 is effective for 40–50 cumulative hours until breathing resistance increases.
+- **Why cloth/surgical masks fail:** Cloth pore size (20–50 µm) is 10× larger than PM2.5 particles (2.5 µm), letting pollutants pass freely.
+- **Certified standards:** Look for NIOSH N95, EN149 FFP2, or BIS IS 9473 certification with an adjustable nose clip for an airtight seal.`,
     };
   }
 
   if (isPurifier) {
     return {
-      modelUsed: "AI Clinical Specialist (Live Telemetry)",
+      modelUsed: "Clinical Intelligence Specialist (Delhi Air Brain)",
       source: "expert-rules",
-      content: `### 🌀 Optimal HEPA Air Purifier Configuration & Room Sealing
+      content: `### 🌀 Optimal HEPA Air Purifier Settings
 
-To achieve and sustain healthy indoor air quality (AQI < 50, PM2.5 < 15 µg/m³) in Delhi NCR homes:
+1. **Fan Speed:** Run on **Medium to High mode** during evening and night hours. Do not rely solely on 'Eco/Silent' mode when outdoor AQI exceeds 300.
+2. **Room Sealing:** Place draft stoppers or damp towels under doors and window gaps to prevent continuous particulate infiltration.
+3. **Filter Sizing:** Ensure your unit's CADR (Clean Air Delivery Rate) provides at least 4 to 5 complete air changes per hour (ACH) for your room size.`,
+    };
+  }
 
-1. **Filter Specifications:** Ensure your unit uses a **True HEPA H13 filter** (99.97% capture at 0.3 µm) with a substantial activated carbon stage for gaseous VOCs and nitrogen oxides.
-2. **Fan Speed:** Run on **Medium to High/Turbo mode** continuously. Automatic 'Sleep/Eco' modes often throttle down prematurely while particulate levels remain elevated.
-3. **Room Sealing:** Apply foam weather-stripping or draft stoppers beneath entry doors and window joints to prevent infiltration of outdoor particulate smog.
-4. **Air Changes per Hour (ACH):** Maintain at least 4 to 5 ACH by sizing the CADR (Clean Air Delivery Rate) appropriately for the room's cubic volume.
-5. **Pre-Filter Maintenance:** Vacuum or wash the outer mesh pre-filter every 2 weeks to prevent airflow throttling.`,
+  if (isOutdoor) {
+    return {
+      modelUsed: "Clinical Intelligence Specialist (Delhi Air Brain)",
+      source: "expert-rules",
+      content: `### ⏱️ Safest Outdoor Activity Window
+
+- 🔴 **05:00 AM – 09:30 AM (Extreme Risk):** Nocturnal surface cooling traps emissions; avoid outdoor running or walks.
+- 🟢 **01:00 PM – 04:30 PM (Safest Window):** Solar heating deepens the mixing layer (${pbl}m), reducing particulate density by up to 40%.
+- 🔴 **07:00 PM – Midnight (High Risk):** Inversion lid re-forms. Move workouts indoors.`,
+    };
+  }
+
+  if (isPediatric) {
+    return {
+      modelUsed: "Clinical Intelligence Specialist (Delhi Air Brain)",
+      source: "expert-rules",
+      content: `### 👶 Pediatric & Infant Air Protection Guidelines
+
+With today's **PM2.5 at ${pm25} µg/m³** and **PM10 at ${pm10} µg/m³**:
+1. **Infant & Child Physiology:** Children breathe 50% more air per pound of body weight, depositing high heavy-metal aerosols deep into developing alveoli.
+2. **Outdoor Restrictions:** Cancel morning outdoor playtime and recess before 09:30 AM.
+3. **Indoor Safety:** Keep children in closed rooms with True HEPA filtration running.
+4. **Clinical Warning Signs:** Seek pediatric evaluation if you notice intercostal retractions (chest pulling in), stridor, or continuous night coughing.`,
     };
   }
 
   if (isEmergency) {
     return {
-      modelUsed: "AI Clinical Specialist (Live Telemetry)",
+      modelUsed: "Clinical Intelligence Specialist (Delhi Air Brain)",
       source: "expert-rules",
-      content: `### 🚨 Emergency Red Flags Requiring Immediate Medical Attention
+      content: `### 🚨 Emergency Red Flags & Immediate Triage
 
-If you or a family member experience any of the following symptoms under current severe air conditions, call **102 / 112** or go to the nearest emergency department immediately:
-
-1. **Severe Dyspnea (Shortness of Breath):** Inability to speak full sentences without gasping, or feeling breathless while resting.
-2. **Chest Pressure or Cardiac Angina:** Heavy crushing sensation, retrosternal chest pain, or pain radiating to the left arm, jaw, or back.
-3. **Central Cyanosis:** Bluish discoloration around the lips, tongue, or nail beds indicative of acute arterial hypoxemia (SpO2 < 90%).
-4. **Refractory Wheezing / Stridor:** High-pitched wheezing that fails to respond after 3 consecutive doses of rescue bronchodilator.
-5. **Altered Mental State / Lethargy:** Confusion, dizziness, or syncope caused by severe hypoxia or carbon monoxide intoxication.`,
+If you or anyone around you experiences the following under current **${aqi} AQI** conditions, call **102 / 112** or go to the emergency room immediately:
+1. **Severe Dyspnea:** Inability to complete a sentence without gasping for breath.
+2. **Cardiac Chest Pain:** Crushing substernal pressure radiating to arm or jaw.
+3. **Cyanosis:** Bluish discoloration of lips, tongue, or fingertips (SpO2 < 90%).
+4. **Unresponsive Wheezing:** Ineffective bronchodilator response after 3 doses.`,
     };
   }
 
   if (isSymptoms) {
     return {
-      modelUsed: "AI Clinical Specialist (Live Telemetry)",
+      modelUsed: "Clinical Intelligence Specialist (Delhi Air Brain)",
       source: "expert-rules",
-      content: `### 🌿 Clinical Management of Common Smog Exposure Symptoms
+      content: `### 🌿 Clinical Symptom Relief for Smog Exposure
 
-Grounded in today's ambient AQI of **${aqi}** (${aqiCat}):
-
-- **Throat Irritation & Pharyngeal Dryness:** Gargle with warm saline solution twice daily. Honey and warm herbal infusions soothe mucosal inflammation.
-- **Ocular Burning & Conjunctival Redness:** Do not rub the eyes. Rinse with chilled sterile saline and use preservative-free lubricating eye drops (e.g., Carboxymethylcellulose 0.5%).
-- **Tracheobronchial Mucus Clearance:** Maintain 2.5–3 liters of daily fluid intake to prevent thickened mucus plugs and facilitate normal ciliary transport.`,
+- **Scratchy/Burning Throat:** Gargle with warm saline solution twice daily; drink warm ginger-turmeric tea.
+- **Burning/Red Eyes:** Do not rub eyes; rinse with cool water and use preservative-free lubricating drops (Carboxymethylcellulose 0.5%).
+- **Headaches & Congestion:** Inhale warm water steam and maintain 2.5–3L daily hydration to thin airway secretions.`,
     };
   }
 
-  // Default general clinical response
+  if (isMeteorology) {
+    return {
+      modelUsed: "Clinical Intelligence Specialist (Delhi Air Brain)",
+      source: "expert-rules",
+      content: `### 🌪️ Atmospheric Dynamics & Winter Smog Mechanics
+
+Delhi's winter pollution crisis is driven by specific meteorological phenomena:
+1. **Thermal Inversion (ΔT: +${invDt}°C):** A warm air lid traps cold surface air and vehicle/biomass smoke near the ground.
+2. **Shallow Boundary Layer (${pbl}m):** Summer mixing reaches 2000m+; winter compresses this to under 300m, concentrating all emissions into a thin breathing zone.
+3. **Low Wind Speeds:** Prevents lateral dispersion, keeping regional PM10 (${pm10} µg/m³) and PM2.5 (${pm25} µg/m³) stagnant.`,
+    };
+  }
+
+  // Dynamic contextual English synthesis
   return {
-    modelUsed: "AI Clinical Specialist (Live Telemetry)",
+    modelUsed: "Clinical Intelligence Specialist (Delhi Air Brain)",
     source: "expert-rules",
-    content: `### 📋 Delhi NCR Clinical Air Quality Advisory
+    content: `### 💡 Direct Response to Your Query (Current Air: ${aqi} AQI · ${aqiCat})
 
-- **Current Atmospheric AQI:** **${aqi}** (${aqiCat})
-- **PM2.5 Concentration:** **${pm25} µg/m³** (${Math.round(pm25 / 15)}× WHO 24h Guideline of 15 µg/m³)
-- **Planetary Boundary Layer Depth:** **${pbl} meters**
+Regarding your question **"${rawQ.length > 50 ? rawQ.slice(0, 50) + '...' : rawQ}"**:
 
-**Core Health Recommendations:**
-1. **Respirator Protection:** Wear an airtight **N95 or FFP2 respirator** whenever stepping outdoors.
-2. **Activity Timing:** Avoid early morning outdoor cardiovascular exercise; postpone essential outdoor activity to the early afternoon (1:00 PM – 4:00 PM) when atmospheric mixing is highest.
-3. **Indoor Sanctuary:** Keep doors and windows closed and run True HEPA air purifiers in living and sleeping quarters.
-4. Feel free to ask any specific question regarding asthma medications, pediatric safety, purifier settings, or emergency symptoms.`,
+1. **Current Environmental Context:** Delhi's PM2.5 is currently at **${pm25} µg/m³** (PM10: **${pm10} µg/m³**) with a shallow mixing layer of **${pbl} meters**. Particulate concentration is elevated.
+2. **Primary Recommendation:** Wear an airtight **N95 respirator** whenever you are outdoors.
+3. **Timing Optimization:** If you need to step outside for activities, target the **01:30 PM – 04:30 PM** window when atmospheric dispersion is highest.
+4. **Indoor Protection:** Keep doors and windows closed and run True HEPA air filtration. Maintain hydration and warm saline gargles for throat comfort.
+
+If you would like to explore specific symptoms, medications, neighborhood trends, or exercise schedules in more detail, just let me know!`,
   };
 }
