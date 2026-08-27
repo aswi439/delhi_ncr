@@ -142,6 +142,18 @@ export function Hero({
     }
   }, [ready]);
 
+  // Optimize background video decoding: strictly play only active video, pause inactive ones
+  useEffect(() => {
+    videoRefs.current.forEach((videoEl, idx) => {
+      if (!videoEl) return;
+      if (idx === activeVideo) {
+        videoEl.play().catch(() => {});
+      } else {
+        videoEl.pause();
+      }
+    });
+  }, [activeVideo]);
+
   // Stable callback when GSAP timeline finishes unfolding all 27 characters
   const handleIntroComplete = useCallback(() => {
     if (completedRef.current) return;
@@ -316,8 +328,10 @@ export function Hero({
               width: "100%",
               height: "100%",
               objectFit: "cover",
-              transition: "opacity 1000ms ease-in-out",
+              transition: "opacity 800ms ease-in-out",
               opacity: activeVideo === idx ? 1 : 0,
+              willChange: "opacity",
+              transform: "translateZ(0)",
             }}
           />
         ))}
@@ -345,6 +359,10 @@ export function Hero({
             width: "100%",
             height: "100%",
             objectFit: "cover",
+            transform: "translate3d(0, 0, 0)",
+            willChange: "transform",
+            backfaceVisibility: "hidden",
+            WebkitBackfaceVisibility: "hidden",
           }}
         />
       </div>
