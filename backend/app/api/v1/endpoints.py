@@ -539,6 +539,53 @@ async def health_chat_proxy(request: Request, payload: HealthChatPayload) -> dic
     raise HTTPException(status_code=502, detail=f"All {len(models)} fallback models failed:\n{error_summary}")
 
 
+# ── GET /health/tts ──────────────────────────────────────────────────────────
+
+@router.get(
+    "/health/tts",
+    summary="Multilingual Text-to-Speech Audio Stream for Tamil, Hindi, and English",
+    tags=["Health Assistant"],
+)
+async def get_multilingual_tts(
+    text: str = Query(..., description="Text to synthesize to speech"),
+    lang: str = Query("en", description="Language code: en, hi, ta"),
+) -> Response:
+    """
+    Streams studio-quality MP3 speech audio for English, Hindi, and Tamil text
+    using Google's neural speech synthesis server-side proxy.
+    """
+    lang_code = "ta" if lang == "ta" else ("hi" if lang == "hi" else "en")
+    clean_text = text.strip()[:200]
+
+    if not clean_text:
+        raise HTTPException(status_code=400, detail="Text parameter cannot be empty")
+
+    url = f"https://translate.google.com/translate_tts?ie=UTF-8&q={clean_text}&tl={lang_code}&client=tw-ob"
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Referer": "https://translate.google.com/",
+    }
+
+    async with httpx.AsyncClient(timeout=10.0) as client:
+        try:
+            resp = await client.get(url, headers=headers)
+            if resp.status_code == 200 and resp.content:
+                return Response(
+                    content=resp.content,
+                    media_type="audio/mpeg",
+                    headers={
+                        "Cache-Control": "public, max-age=86400",
+                        "Content-Type": "audio/mpeg",
+                        "Access-Control-Allow-Origin": "*",
+                    },
+                )
+            else:
+                raise HTTPException(status_code=resp.status_code, detail="TTS service upstream error")
+        except Exception as e:
+            raise HTTPException(status_code=502, detail=f"TTS synthesis error: {str(e)}")
+
+
+
 # ── GET /industries ──────────────────────────────────────────────────────────
 
 @router.get(
