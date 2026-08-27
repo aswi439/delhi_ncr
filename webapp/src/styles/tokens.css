@@ -1,0 +1,49 @@
+/* ══════════════════════════════════════════════════════════════════════════
+   NCR·72 — design tokens
+   ──────────────────────────────────────────────────────────────────────────
+   Ported verbatim from frontend-web/styles.css (the vanilla prototype).
+   Palette discipline: the chrome is a single desaturated blue-grey family.
+   The ONLY saturated colour in the interface comes from the CPCB AQI ramp,
+   so anything coloured is, by construction, telling you about air quality.
+   The one reuse is fire detections, which borrow the ramp's orange — the
+   fires being a pollution source, that reads as intent rather than accident.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+:root {
+  /* ── canvas ─────────────────────────────────────────────────────────── */
+  --abyss:      #070C12;
+  --deep:       #0A1119;
+  --slab:       #0F1922;
+  --slab-hi:    #14212C;
+  --hairline:   rgba(140, 163, 182, 0.13);
+  --hairline-2: rgba(140, 163, 182, 0.26);
+
+  /* ── ink ────────────────────────────────────────────────────────────── */
+  --bone:     #E9F0F6;
+  --mist:     #8CA3B6;
+  --mist-dim: #5C7183;
+  --mist-faint: #3E4E5C;
+
+  /* ── CPCB National AQI (2014) ramp, tuned for a dark ground ─────────── */
+  --aqi-1: #4FB477;   /* 0–50    Good          */
+  --aqi-2: #9FC93C;   /* 51–100  Satisfactory  */
+  --aqi-3: #EFC02D;   /* 101–200 Moderate      */
+  --aqi-4: #F2892F;   /* 201–300 Poor          */
+  --aqi-5: #E8503C;   /* 301–400 Very Poor     */
+  /* CPCB prints Severe as a dark maroon, which disappears on this ground.
+     Pushed toward magenta so it reads as "past red" and stays legible. */
+  --aqi-6: #C0356A;
+
+  /* Bound at runtime to the scrubbed hour's category, so accents follow the air */
+  --live: var(--mist);
+
+  --ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+
+  --pad: clamp(1.25rem, 4vw, 4.5rem);
+  --gap: clamp(1.5rem, 3vw, 3rem);
+
+  --mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --sans: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --cond: "IBM Plex Sans Condensed", "IBM Plex Sans", system-ui, sans-serif;
+}

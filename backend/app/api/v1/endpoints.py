@@ -1,0 +1,543 @@
+"""
+API v1 Endpoints
+================
+Read-only (GET) endpoints are public but rate-limited.
+Mutation (POST /ingest) requires X-API-Key header.
+"""
+
+from datetime import datetime, timezone
+
+from fastapi import APIRouter, Depends, Query, Request, HTTPException
+from pydantic import BaseModel
+from slowapi import Limiter
+from slowapi.util import get_remote_address
+import httpx
+
+
+from app.core.security import require_api_key
+from app.physics.inversion_engine import compute_inversion_series, fetch_inversion_data
+from app.physics.plume_advection import compute_plume_vectors
+from app.schemas.forecast import (
+    CityAggregateResponse,
+    DelhiBBox,
+    ExposureRequest,
+    ExposureResponse,
+    ForecastResponse,
+    InversionStatus,
+    PlumeVectorsResponse,
+    SourceApportionmentResponse,
+    SourceTimeSeriesResponse,
+    StationObservation,
+    VehicleBreakdown,
+)
+from app.services.aqi_service import build_72h_forecast, compute_city_aggregate
+from app.services.consensus_service import collect_consensus
+from app.services.emission_service import EmissionService
+from app.services.exposure_service import calculate_personalized_exposure
+from app.services.realtime_service import (
+    fetch_all_stations,
+    fetch_city_overview,
+    fetch_station_detail,
+)
+
+router = APIRouter(prefix="/api/v1")
+limiter = Limiter(key_func=get_remote_address)
+
+
+# ── GET /forecast/72hr ───────────────────────────────────────────────────────
+
+@router.get(
+    "/forecast/72hr",
+    response_model=ForecastResponse,
+    summary="72-hour AQI forecast for Delhi NCR",
+    tags=["Forecast"],
+)
+@limiter.limit("30/minute")
+async def forecast_72hr(
+    request: Request,
+    lat: float = Query(28.6139, ge=28.0, le=29.0, description="Station latitude"),
+    lon: float = Query(77.2090, ge=76.5, le=77.8, description="Station longitude"),
+    station_name: str = Query("Delhi-ITO", max_length=64),
+    base_aqi: int | None = Query(None, ge=0, le=500, description="Live station AQI for hour-0 anchoring"),
+) -> ForecastResponse:
+    """
+    Returns a 72-hour hourly AQI forecast including:
+    - CPCB sub-indices (PM2.5, PM10, O3, NO2, SO2, CO)
+    - PBL height and thermal inversion strength
+    - Stubble-burn plume contribution fraction
+    - Two-way aerosol-radiation feedback applied
+    """
+    # Validate coordinate in NCR bbox
+    DelhiBBox(lat=lat, lon=lon)  # raises 422 if invalid
+    try:
+        # Anchor hour 0 to the nearest live station reading when one is available,
+        # so the forecast starts from observed air rather than from climatology.
+        live_pollutants = None
+        live_pm25 = None
+        live_pm10 = None
+        try:
+            stations = await fetch_all_stations(mode="instant")
+            for s in stations:
+                slat = s.get("lat", 0)
+                slon = s.get("lon", 0)
+                dist = ((slat - lat) ** 2 + (slon - lon) ** 2) ** 0.5
+                if dist < 0.15:  # ~15 km in the Delhi latitude band
+                    polls = s.get("pollutants", {})
+                    live_pollutants = polls
+                    live_pm25 = polls.get("PM2.5")
+                    live_pm10 = polls.get("PM10")
+                    break
+        except (ValueError, RuntimeError, httpx.HTTPError, KeyError):
+            pass  # fall back to the modelled hour 0
+
+        # When station data is unavailable, anchor hour 0 to the multi-source live consensus
+        if (live_pm25 is None or not live_pollutants) and base_aqi is None:
+            try:
+                c_data = await collect_consensus()
+                if c_data and "metrics" in c_data:
+                    c_m = c_data["metrics"]
+                    live_pollutants = {
+                        "PM2.5": float(c_m["pm25"]) if c_m.get("pm25") is not None else None,
+                        "PM10": float(c_m["pm10"]) if c_m.get("pm10") is not None else None,
+                        "NO2": float(c_m["no2"]) if c_m.get("no2") is not None else None,
+                        "O3": float(c_m["o3"]) if c_m.get("o3") is not None else None,
+                        "SO2": float(c_m["so2"]) if c_m.get("so2") is not None else None,
+                        "CO": float(c_m["co"]) if c_m.get("co") is not None else None,
+                    }
+                    if c_m.get("pm25") is not None:
+                        live_pm25 = float(c_m["pm25"])
+                    if c_m.get("pm10") is not None:
+                        live_pm10 = float(c_m["pm10"])
+            except Exception:
+                pass
+
+        data = await build_72h_forecast(
+            lat, lon, station_name,
+            live_pm25=live_pm25, live_pm10=live_pm10,
+            base_aqi=base_aqi,
+            live_pollutants=live_pollutants,
+        )
+        return ForecastResponse(**data)
+    except (ValueError, RuntimeError, httpx.HTTPError) as e:
+        raise HTTPException(status_code=502, detail=f"Live upstream unavailable: {str(e)}")
+
+
+# ── GET /forecast/consensus ───────────────────────────────────────────────────
+
+@router.get(
+    "/forecast/consensus",
+    summary="Five-source consensus current conditions and deterministic 72-hour projection",
+    tags=["Forecast"],
+)
+@limiter.limit("20/minute")
+async def forecast_consensus(request: Request) -> dict:
+    """Fetch provider feeds concurrently and return a best-effort consensus forecast."""
+    try:
+        return await collect_consensus()
+    except Exception as e:
+        # The service normally catches provider failures itself; this final guard
+        # prevents one unexpected payload from taking down the dashboard.
+        raise HTTPException(status_code=502, detail=f"Consensus service unavailable: {e}")
+
+
+# ── GET /inversion/status ────────────────────────────────────────────────────
+
+@router.get(
+    "/inversion/status",
+    response_model=list[InversionStatus],
+    summary="Current 72-hour atmospheric inversion diagnostics",
+    tags=["Meteorology"],
+)
+@limiter.limit("30/minute")
+async def inversion_status(request: Request) -> list[InversionStatus]:
+    """
+    Returns per-hour inversion diagnostics for the next 72 hours:
+    - ΔT = T(925hPa) − T(1000hPa)
+    - PBL height with inversion suppression
+    - Environmental lapse rate (K/km)
+    - AQI amplification factor
+    """
+    try:
+        met_data = await fetch_inversion_data()
+        hourly_times = met_data["hourly"]["time"][:72]
+        series = compute_inversion_series(met_data)
+
+        return [
+            InversionStatus(
+                timestamp=datetime.fromisoformat(t),
+                **s,
+            )
+            for t, s in zip(hourly_times, series)
+        ]
+    except (ValueError, RuntimeError, httpx.HTTPError, KeyError) as e:
+        raise HTTPException(status_code=502, detail=f"Meteorology upstream unavailable: {str(e)}")
+
+
+# ── GET /plume/vectors ───────────────────────────────────────────────────────
+
+@router.get(
+    "/plume/vectors",
+    response_model=PlumeVectorsResponse,
+    summary="Stubble-burn plume trajectories and hotspots",
+    tags=["Plume Dispersion"],
+)
+@limiter.limit("20/minute")
+async def plume_vectors(request: Request) -> PlumeVectorsResponse:
+    """
+    Returns current fire hotspots (NASA FIRMS, VIIRS + MODIS NRT) and their
+    Lagrangian plume trajectories advected on the 850 hPa wind.
+
+    Each plume includes:
+    - Origin hotspot with Fire Radiative Power (MW) and detection confidence
+    - 72-hour trajectory as lat/lon waypoints at hourly steps
+    - Closest approach to Delhi and the along-path travel distance to it
+    - PM2.5 column loading (µg/m²) and transport-layer concentration (µg/m³)
+
+    Concentrations are TRANSPORT-LAYER values, not surface values. How much of
+    an arriving plume reaches the ground depends on Delhi's mixing depth that
+    hour, which the forecast's box model resolves.
+
+    If FIRMS is unreachable the hotspot list is empty. No synthetic fires are
+    ever returned.
+    """
+    data = await compute_plume_vectors()
+    now = datetime.now(timezone.utc)
+    return PlumeVectorsResponse(timestamp=now, **data)
+
+
+# ── POST /ingest/observation ─────────────────────────────────────────────────
+
+@router.post(
+    "/ingest/observation",
+    status_code=202,
+    summary="Ingest a live station observation (requires API key)",
+    tags=["Ingestion"],
+)
+@limiter.limit("120/minute")
+async def ingest_observation(
+    request: Request,
+    obs: StationObservation,
+    _key: str = Depends(require_api_key),
+) -> dict:
+    """
+    Accepts a validated station observation for assimilation.
+    Requires X-API-Key header with valid key.
+
+    Returns 202 Accepted. Persistence is deliberately out of scope: there is no
+    time-series database in this deployment, so the observation is validated and
+    acknowledged but not stored. Do not treat a 202 here as durable.
+    """
+    return {
+        "accepted": True,
+        "station_id": obs.station_id,
+        "timestamp": obs.timestamp.isoformat(),
+        "message": "Observation accepted for assimilation",
+    }
+
+
+# ── GET /health ──────────────────────────────────────────────────────────────
+
+@router.get("/health", tags=["System"])
+async def health() -> dict:
+    return {"status": "ok", "timestamp": datetime.now(timezone.utc).isoformat()}
+
+
+# ── GET /realtime/overview ────────────────────────────────────────────────────
+
+@router.get(
+    "/realtime/overview",
+    summary="Live Delhi city-level AQI from OpenAQ",
+    tags=["Real-Time"],
+)
+@limiter.limit("60/minute")
+async def realtime_overview(request: Request, mode: str = Query("instant", description="AQI calc mode (instant or nowcast)")) -> dict:
+    """Returns the current overall Delhi AQI, PM2.5, PM10, O3, NO2."""
+    try:
+        return await fetch_city_overview(mode)
+    except (ValueError, RuntimeError, httpx.HTTPError) as e:
+        raise HTTPException(status_code=502, detail=f"Live OpenAQ upstream unavailable: {str(e)}")
+
+
+# ── GET /realtime/stations ────────────────────────────────────────────────────
+
+@router.get(
+    "/realtime/stations",
+    summary="All Delhi NCR monitoring stations with live AQI",
+    tags=["Real-Time"],
+)
+@limiter.limit("30/minute")
+async def realtime_stations(request: Request, mode: str = Query("instant", description="AQI calc mode (instant or nowcast)")) -> list:
+    """
+    Returns all CPCB monitoring stations in Delhi NCR with:
+    - Real-time AQI (from OpenAQ)
+    - Lat/lon for map plotting
+    - AQI category and colour code
+    Data updates every ~1 hour from CPCB stations.
+    """
+    try:
+        return await fetch_all_stations(mode)
+    except (ValueError, RuntimeError, httpx.HTTPError) as e:
+        raise HTTPException(status_code=502, detail=f"Live OpenAQ upstream unavailable: {str(e)}")
+
+
+# ── GET /realtime/station/{uid} ───────────────────────────────────────────────
+
+@router.get(
+    "/realtime/station/{uid}",
+    summary="Full pollutant breakdown for a single station",
+    tags=["Real-Time"],
+)
+@limiter.limit("60/minute")
+async def realtime_station_detail(
+    request: Request,
+    uid: str,
+    mode: str = Query("instant", description="AQI calc mode (instant or nowcast)"),
+) -> dict:
+    """
+    Returns full pollutant data for a station (by OpenAQ location id):
+    PM2.5, PM10, O3, NO2, SO2, CO, temperature, humidity, wind speed.
+
+    `mode` must match whatever the caller displays elsewhere — `instant` labels
+    with CPCB 2014 categories, `nowcast` with US EPA 2012 ones. The two scales
+    are not interchangeable.
+    """
+    try:
+        return await fetch_station_detail(uid, mode)
+    except (ValueError, RuntimeError, httpx.HTTPError) as e:
+        raise HTTPException(status_code=502, detail=f"Live OpenAQ upstream unavailable: {str(e)}")
+
+
+# ── POST /exposure/calculate ──────────────────────────────────────────────────
+
+@router.post(
+    "/exposure/calculate",
+    response_model=ExposureResponse,
+    summary="Personalized PM2.5 Inhaled Dose, Cigarette Equivalence & Smart Activity Planner",
+    tags=["Exposure"],
+)
+@limiter.limit("60/minute")
+async def calculate_exposure(
+    request: Request,
+    payload: ExposureRequest,
+) -> ExposureResponse:
+    """
+    Calculates:
+    1. Inhaled PM2.5 mass (µg) based on user activity ventilation rate (resting, walking, running).
+    2. Cigarette consumption equivalent (Berkeley Earth 22 µg/m³ 24h benchmark).
+    3. Exertion health danger warning.
+    4. 72-hour sliding window optimal activity window to minimize pollution exposure.
+    """
+    forecast_points = payload.forecast_72h
+    # If client didn't supply 72h forecast array, fetch live 72h forecast automatically
+    if not forecast_points:
+        try:
+            fc = await build_72h_forecast(28.6139, 77.2090, "Delhi-NCR")
+            forecast_points = fc.get("forecast_hours", [])
+        except Exception:
+            forecast_points = []
+
+    res = calculate_personalized_exposure(
+        activity_type=payload.activity_type,
+        duration_hours=payload.duration_hours,
+        target_time=payload.target_time,
+        current_pm25=payload.current_pm25,
+        forecast_72h=forecast_points,
+    )
+    return ExposureResponse(**res)
+
+
+# ── GET /forecast/source-apportionment ───────────────────────────────────────
+
+@router.get(
+    "/forecast/source-apportionment",
+    response_model=SourceApportionmentResponse,
+    summary="Dynamic PM2.5 Source Apportionment via NO2 Chemical Proxy & Fleet Breakdown",
+    tags=["Source Apportionment"],
+)
+@limiter.limit("60/minute")
+async def get_source_apportionment(
+    request: Request,
+    pm25: float | None = Query(None, ge=0.0, le=1000.0, description="Ambient PM2.5 in µg/m³"),
+    no2: float | None = Query(None, ge=0.0, le=500.0, description="Ambient NO2 tracer in µg/m³"),
+    hour: int | None = Query(None, ge=0, le=23, description="Hour of day (0-23 in IST)"),
+) -> SourceApportionmentResponse:
+    """
+    Computes dynamic chemical-proxy source apportionment:
+    - Uses ambient NO2 as a tracer for vehicle exhaust relative to Delhi's 60 µg/m³ baseline.
+    - Dynamically scales the 25% Transport share and redistributes anomalies to Dust, Biomass, and Industry.
+    - Applies diurnal fleet sub-breakdown: Nighttime Truck Entry (22:00-06:00), Rush Hour (08:00-11:00 & 17:00-20:00), and Normal Day.
+    """
+    if pm25 is None or no2 is None:
+        try:
+            consensus = await collect_consensus()
+            metrics = consensus.get("metrics", {})
+            if pm25 is None:
+                pm25 = float(metrics.get("pm25", 53.8))
+            if no2 is None:
+                no2 = float(metrics.get("no2", 38.5))
+        except Exception:
+            if pm25 is None:
+                pm25 = 53.8
+            if no2 is None:
+                no2 = 38.5
+
+    return EmissionService.calculate_source_apportionment(
+        current_pm25=pm25,
+        current_no2=no2,
+        hour=hour,
+    )
+
+
+# ── GET /forecast/source-timeseries ──────────────────────────────────────────
+
+@router.get(
+    "/forecast/source-timeseries",
+    response_model=SourceTimeSeriesResponse,
+    summary="72-Hour Predictive Source Apportionment & Diurnal Vehicle Fleet Time-Series",
+    tags=["Source Apportionment"],
+)
+@limiter.limit("60/minute")
+async def get_source_timeseries(
+    request: Request,
+) -> SourceTimeSeriesResponse:
+    """
+    Simulates 72-hour hourly predictive source apportionment and vehicle fleet dynamics:
+    - Dust (30%), Biomass (25%), Industry (20%), Transport (25%).
+    - Diurnal Vehicle Fleet Dynamics:
+      - Nighttime (22:00-06:00): Trucks 61%, 2/3-Wheelers 25%, Cars 14%.
+      - Rush Hour (08:00-11:00 & 17:00-20:00): Trucks 10%, 2/3-Wheelers 60%, Cars 30%.
+      - Standard Day: Trucks 30%, 2/3-Wheelers 50%, Cars 20%.
+    - Anchored to the 72-hour prognostic PM2.5 atmospheric forecast.
+    """
+    pm25_series: list[float] = []
+    try:
+        fc = await build_72h_forecast(28.6139, 77.2090, "Delhi-NCR")
+        for h in fc.get("forecast_hours", []):
+            if "pm25" in h:
+                pm25_series.append(float(h["pm25"]))
+            elif "sub_indices" in h:
+                found = False
+                for s in h["sub_indices"]:
+                    if "25" in s.get("pollutant", "") or "2.5" in s.get("pollutant", ""):
+                        pm25_series.append(float(s.get("concentration", 50.0)))
+                        found = True
+                        break
+                if not found:
+                    pm25_series.append(50.0)
+            else:
+                pm25_series.append(50.0)
+    except Exception:
+        pm25_series = []
+
+    return EmissionService.build_72h_source_timeseries(pm25_series=pm25_series)
+
+
+# ── GET /current-aggregate ───────────────────────────────────────────────────
+
+@router.get(
+    "/current-aggregate",
+    response_model=CityAggregateResponse,
+    summary="Harmonized Delhi NCR City-Wide Aggregate AQI & CPCB Multi-Pollutant Maximum",
+    tags=["City Aggregate"],
+)
+@limiter.limit("60/minute")
+async def get_current_aggregate(
+    request: Request,
+    mode: str = Query("instant", pattern="^(instant|nowcast)$", description="AQI calculation mode"),
+) -> CityAggregateResponse:
+    """
+    Computes the unified Delhi NCR City Aggregate AQI across all 43 monitoring stations.
+    Applies the official CPCB multi-pollutant maximum index rule across all species.
+    """
+    return await compute_city_aggregate(mode=mode)
+
+
+# ── POST /health/chat ────────────────────────────────────────────────────────
+
+class HealthChatPayload(BaseModel):
+    messages: list[dict]
+    api_key: str | None = None
+    temperature: float = 0.6
+    max_tokens: int = 1800
+
+
+@router.post(
+    "/health/chat",
+    summary="Delhi NCR Health Care Assistant Groq Inference Proxy with Model Fallback",
+    tags=["Health Assistant"],
+)
+@limiter.limit("60/minute")
+async def health_chat_proxy(request: Request, payload: HealthChatPayload) -> dict:
+    """
+    Proxies chat queries to Groq using a resilient 7-tier model fallback sequence.
+    Handles server-side execution with zero CORS or CSP preflight blocks.
+    """
+    key = (payload.api_key or "").strip() or os.getenv("GROQ_API_KEY", "")
+
+    models = [
+        {"id": "qwen/qwen3.8-27b", "name": "Qwen 3.8 27B"},
+        {"id": "openai/gpt-oss-120b", "name": "GPT-OSS 120B"},
+        {"id": "qwen/qwen3.6-27b", "name": "Qwen 3.6 27B"},
+        {"id": "openai/gpt-oss-20b", "name": "GPT-OSS 20B"},
+        {"id": "llama-3.3-70b-versatile", "name": "Llama 3.3 70B Versatile"},
+        {"id": "llama-3.1-8b-instant", "name": "Llama 3.1 8B Instant"},
+        {"id": "allam-2-7b", "name": "ALLaM 2 7B"},
+    ]
+
+    attempts = []
+    headers = {
+        "Authorization": f"Bearer {key}",
+        "Content-Type": "application/json",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    }
+
+    import time
+
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        for m in models:
+            start = time.perf_counter()
+            try:
+                resp = await client.post(
+                    "https://api.groq.com/openai/v1/chat/completions",
+                    headers=headers,
+                    json={
+                        "model": m["id"],
+                        "messages": payload.messages,
+                        "temperature": payload.temperature,
+                        "max_tokens": payload.max_tokens,
+                    },
+                )
+                elapsed_ms = int((time.perf_counter() - start) * 1000)
+
+                if resp.status_code == 200:
+                    data = resp.json()
+                    content = data.get("choices", [{}])[0].get("message", {}).get("content", "")
+                    if content:
+                        if "</think>" in content:
+                            content = content.split("</think>")[-1].strip()
+                        attempts.append({"model": m["name"], "success": True, "durationMs": elapsed_ms})
+                        return {
+                            "content": content,
+                            "modelUsed": m["name"],
+                            "latencyMs": elapsed_ms,
+                            "attempts": attempts,
+                        }
+                else:
+                    err_msg = f"HTTP {resp.status_code}"
+                    try:
+                        err_json = resp.json()
+                        err_msg = err_json.get("error", {}).get("message", err_msg)
+                    except Exception:
+                        pass
+                    attempts.append({"model": m["name"], "success": False, "error": err_msg, "durationMs": elapsed_ms})
+            except Exception as e:
+                elapsed_ms = int((time.perf_counter() - start) * 1000)
+                attempts.append({"model": m["name"], "success": False, "error": str(e), "durationMs": elapsed_ms})
+
+    error_summary = "\n".join(f"• {a['model']}: {a.get('error', 'Failed')}" for a in attempts)
+    raise HTTPException(status_code=502, detail=f"All {len(models)} fallback models failed:\n{error_summary}")
+
+
+
+
+

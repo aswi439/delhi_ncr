@@ -1,0 +1,38 @@
+# fastapi + server
+fastapi==0.111.0
+uvicorn[standard]==0.29.0
+pydantic==2.7.1
+pydantic-settings==2.2.1
+
+# rate limiting
+slowapi==0.1.9
+
+# HTTP client (async, for fetching FIRMS / OpenAQ / Open-Meteo)
+httpx==0.27.0
+
+# In-process TTL caching (used by services/realtime_service.py)
+cachetools==5.3.3
+
+# .env loading for the standalone scripts under scripts/manual/
+python-dotenv==1.0.1
+
+# Data / science
+numpy==1.26.4
+pandas==2.2.2
+scipy==1.13.0
+
+# Frontend
+streamlit==1.35.0
+plotly==5.22.0
+pydeck==0.9.1
+folium==0.19.7
+streamlit-folium==0.25.0
+
+# NOTE: no redis client. Nothing in the backend connects to Redis — the only
+# cache is an in-process TTLCache and the rate limiter is in-memory.
+
+# Linting / dev
+ruff==0.4.4
+pytest==8.2.0
+pytest-asyncio==0.23.7
+requests==2.32.3
