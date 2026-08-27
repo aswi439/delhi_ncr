@@ -130,3 +130,20 @@
   transform-origin: center;
 }
 
+/* Subtle gentle pulse for critical alert badge (non-annoying) */
+@keyframes alertPulseGlow {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+  }
+  50% {
+    transform: scale(1.1);
+    box-shadow: 0 0 0 4px rgba(239, 68, 68, 0);
+  }
+}
+
+.alert-bell-pulse {
+  animation: alertPulseGlow 2.4s ease-in-out infinite;
+}
+
+

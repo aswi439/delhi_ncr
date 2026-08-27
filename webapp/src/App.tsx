@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 import { Boot } from "@/components/Boot";
 import { ConsensusDashboard } from "@/components/ConsensusDashboard";
@@ -14,6 +14,7 @@ import { HistoricDataPage } from "@/components/HistoricDataPage";
 import { AtmosphericDynamicsPage } from "@/components/AtmosphericDynamicsPage";
 import { ExposureTrackerPage } from "@/components/ExposureTrackerPage";
 import { HealthCareAssistantPage } from "@/components/HealthCareAssistantPage";
+import { AlertsPage } from "@/components/AlertsPage";
 import { PollutantCardStackSection } from "@/components/PollutantCardStackSection";
 import GradualBlur from "@/components/ui/GradualBlur";
 import { useCityAggregate } from "@/hooks/useCityAggregate";
@@ -24,6 +25,7 @@ import { useForecastData } from "@/hooks/useForecastData";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
 import { categoryColor } from "@/lib/aqi";
 import { stamp as fmtStamp } from "@/lib/format";
+import { evaluateAlerts, loadAlertSettings } from "@/lib/alertsEngine";
 
 /**
  * The console. One shared hour-cursor drives every panel; one data hook owns all
@@ -73,6 +75,12 @@ export default function App() {
       ) {
         return "health-assistant";
       }
+      if (
+        window.location.hash === "#alerts" ||
+        window.location.hash === "#alert"
+      ) {
+        return "alerts";
+      }
     }
     return "overview";
   });
@@ -105,6 +113,11 @@ export default function App() {
         window.location.hash === "#health"
       ) {
         setCurrentPage("health-assistant");
+      } else if (
+        window.location.hash === "#alerts" ||
+        window.location.hash === "#alert"
+      ) {
+        setCurrentPage("alerts");
       } else if (window.location.hash === "#overview" || window.location.hash === "") {
         setCurrentPage("overview");
       }
@@ -126,6 +139,8 @@ export default function App() {
         ? "exposure-tracker"
         : page === "health-assistant"
         ? "health-assistant"
+        : page === "alerts"
+        ? "alerts"
         : "overview";
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
@@ -134,6 +149,22 @@ export default function App() {
   const n = hours.length;
   const cursor = useCursor(Math.max(0, n - 1), reduced);
   const hour = hours[cursor.cursor] ?? null;
+
+  // Reactively compute alert stats for header bell icon
+  const alertEvaluation = useMemo(() => {
+    return evaluateAlerts({
+      cityAggregate: cityAggregate.data,
+      stations: data.stations.data ?? [],
+      forecast: data.forecast.data,
+      currentHour: hour,
+      plume: data.plume.data,
+      consensus: consensus.data,
+      userSettings: loadAlertSettings(),
+    });
+  }, [cityAggregate.data, data.stations.data, data.forecast.data, hour, data.plume.data, consensus.data]);
+
+  const unreadAlertsCount = alertEvaluation.unreadCount;
+  const hasCriticalAlert = alertEvaluation.criticalCount > 0;
 
   const pm25 = hour?.sub_indices.find((s) => s.pollutant === "PM2.5")?.concentration ?? null;
   const stamp = data.forecast.data?.generated_at ? fmtStamp(data.forecast.data.generated_at) : "—";
@@ -197,6 +228,8 @@ export default function App() {
         onPageChange={handlePageChange}
         activeVideo={activeVideo}
         onVideoChange={setActiveVideo}
+        unreadAlertsCount={unreadAlertsCount}
+        hasCriticalAlert={hasCriticalAlert}
       />
       <SampleBanner sample={data.sample} onScenario={data.setScenario} />
 
@@ -245,6 +278,17 @@ export default function App() {
           consensus={consensus.data}
           cityAggregate={cityAggregate.data}
           onBack={() => handlePageChange("overview")}
+        />
+      ) : currentPage === "alerts" ? (
+        <AlertsPage
+          cityAggregate={cityAggregate.data}
+          stations={data.stations}
+          forecast={data.forecast}
+          hour={hour}
+          plume={data.plume}
+          consensus={consensus.data}
+          onBack={() => handlePageChange("overview")}
+          onNavigate={(p) => handlePageChange(p)}
         />
       ) : (
         <main ref={mainRef}>
