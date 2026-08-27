@@ -22,7 +22,7 @@ import {
   type MapLayers,
   type MapStyle,
 } from "@/lib/mapgeo";
-import type { PlumeVectorsResponse, StationReading } from "@/lib/types";
+import type { IndustryRecord, PlumeVectorsResponse, StationReading } from "@/lib/types";
 
 /**
  * Online renderer — a real interactive Leaflet map on keyless raster tiles.
@@ -35,6 +35,7 @@ import type { PlumeVectorsResponse, StationReading } from "@/lib/types";
 interface MapLeafletProps {
   stations: StationReading[];
   plume: PlumeVectorsResponse | null;
+  industries?: IndustryRecord[];
   layers: MapLayers;
   style: MapStyle;
   selectedUid: string | null;
@@ -43,13 +44,14 @@ interface MapLeafletProps {
 }
 
 // Custom panes keep the layer order deterministic: heat (overlayPane, 400) sits
-// beneath the station glow/dots and fire hotspots regardless of mount timing.
+// beneath the station glow/dots, industries, and fire hotspots regardless of mount timing.
 function Panes() {
   const map = useMap();
   useEffect(() => {
     const spec: Array<[string, string]> = [
       ["ncrGlow", "440"],
       ["ncrStations", "450"],
+      ["ncrIndustries", "455"],
       ["ncrFires", "460"],
     ];
     for (const [name, z] of spec) {
@@ -108,6 +110,7 @@ function AutoResize() {
 export default function MapLeaflet({
   stations,
   plume,
+  industries = [],
   layers,
   style,
   selectedUid,
@@ -196,6 +199,42 @@ export default function MapLeaflet({
           ))
         : null}
 
+      {/* Delhi-Only Industrial Facilities & Power Stations */}
+      {layers.industries && industries.length > 0
+        ? industries.map((ind, i) => (
+            <Fragment key={ind.id ? `ind-${ind.id}` : `ind-${i}`}>
+              <CircleMarker
+                center={[ind.latitude, ind.longitude]}
+                radius={8}
+                pane="ncrGlow"
+                interactive={false}
+                pathOptions={{ stroke: false, fillColor: "#a855f7", fillOpacity: 0.35 }}
+              />
+              <CircleMarker
+                center={[ind.latitude, ind.longitude]}
+                radius={5.5}
+                pane="ncrIndustries"
+                pathOptions={{
+                  color: "#ffffff",
+                  weight: 1.5,
+                  fillColor: "#9333ea",
+                  fillOpacity: 1,
+                }}
+              >
+                <Tooltip direction="top" offset={[0, -6]}>
+                  <div style={{ padding: "2px 4px", fontSize: "11px", lineHeight: "1.4" }}>
+                    <strong style={{ color: "#c084fc", display: "block" }}>🏭 {ind.name}</strong>
+                    <span style={{ color: "#94a3b8", display: "block" }}>{ind.sector || ind.category || "Industrial Source"}</span>
+                    <span style={{ color: "#38bdf8", fontSize: "10px", display: "block" }}>
+                      📍 {ind.city}, {ind.state} {ind.capacity ? `• ${ind.capacity}` : ""}
+                    </span>
+                  </div>
+                </Tooltip>
+              </CircleMarker>
+            </Fragment>
+          ))
+        : null}
+
       {/* Stations: a soft AQI "plume" glow behind a clickable dot */}
       {layers.stations
         ? stations.map((s) => {
@@ -235,3 +274,4 @@ export default function MapLeaflet({
     </MapContainer>
   );
 }
+

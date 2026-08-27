@@ -366,6 +366,24 @@ export interface CityAggregateResponse {
   timestamp: string;
 }
 
+export interface IndustryRecord {
+  id?: string | number;
+  name: string;
+  city: "Delhi" | string;
+  state: "Delhi" | string;
+  latitude: number;
+  longitude: number;
+  category?: string | null;
+  sector?: string | null;
+  status?: string | null;
+  capacity?: string | number | null;
+  address?: string | null;
+}
 
-
-
+export interface IndustryResponse {
+  city: string;
+  state: string;
+  count: number;
+  source: string;
+  records: IndustryRecord[];
+}

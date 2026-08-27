@@ -17,9 +17,11 @@ import type {
   CityAggregateResponse,
   CityOverview,
   ForecastResponse,
+  IndustryRecord,
   PlumeVectorsResponse,
   StationReading,
 } from "@/lib/types";
+import { fetchDelhiIndustries } from "@/lib/supabase";
 
 // Leaflet's bundle is only fetched when the online renderer actually mounts —
 // offline mode never pays for it.
@@ -43,6 +45,7 @@ const LAYER_DEFS: Array<{ key: keyof MapLayers; label: string }> = [
   { key: "stations", label: "Stations" },
   { key: "heatmap", label: "Heatmap" },
   { key: "fires", label: "Fires" },
+  { key: "industries", label: "Industries" },
 ];
 
 const MODE_DEFS: Array<{ key: RenderMode; label: string }> = [
@@ -72,12 +75,31 @@ export function StationMap({
   const reduced = useReducedMotion();
 
   const [selectedUid, setSelectedUid] = useState<string | null>(null);
-  const [layers, setLayers] = useState<MapLayers>({ stations: true, heatmap: false, fires: true });
+  const [layers, setLayers] = useState<MapLayers>({
+    stations: true,
+    heatmap: false,
+    fires: true,
+    industries: true,
+  });
+  const [industries, setIndustries] = useState<IndustryRecord[]>([]);
   const [styleId, setStyleId] = useState<MapStyleId>("dark");
   const [renderMode, setRenderMode] = useState<RenderMode>("auto");
   const [tileFailed, setTileFailed] = useState(false);
 
   const tileErrCount = useRef(0);
+
+  // Fetch Delhi-only industry facilities (Supabase database-level filtered)
+  useEffect(() => {
+    let active = true;
+    fetchDelhiIndustries().then((records) => {
+      if (active && records.length > 0) {
+        setIndustries(records);
+      }
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   // Clean slate whenever style changes
   useEffect(() => {
@@ -201,6 +223,7 @@ export function StationMap({
                 <MapLeaflet
                   stations={layers.stations ? stationList : []}
                   plume={plume.data}
+                  industries={layers.industries ? industries : []}
                   layers={layers}
                   style={MAP_STYLES[styleId]}
                   selectedUid={selectedUid}
@@ -212,6 +235,7 @@ export function StationMap({
               <MapCanvas
                 stations={stationList}
                 plume={plume.data}
+                industries={layers.industries ? industries : []}
                 layers={layers}
                 style={styleId}
                 cursor={cursor}

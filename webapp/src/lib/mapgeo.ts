@@ -78,6 +78,7 @@ export interface MapLayers {
   stations: boolean;
   heatmap: boolean;
   fires: boolean;
+  industries: boolean;
 }
 
 /**

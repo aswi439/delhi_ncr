@@ -10,7 +10,7 @@ import {
   type MapLayers,
   type MapStyleId,
 } from "@/lib/mapgeo";
-import type { PlumeVectorsResponse, StationReading } from "@/lib/types";
+import type { IndustryRecord, PlumeVectorsResponse, StationReading } from "@/lib/types";
 
 /**
  * Offline renderer — a self-contained Canvas schematic used when the browser is
@@ -30,6 +30,7 @@ const PULSE_MS = 2600;
 interface MapCanvasProps {
   stations: StationReading[];
   plume: PlumeVectorsResponse | null;
+  industries?: IndustryRecord[];
   layers: MapLayers;
   style: MapStyleId;
   cursor: number;
@@ -73,6 +74,7 @@ interface ProjectedPoint {
 export function MapCanvas({
   stations,
   plume,
+  industries = [],
   layers,
   style,
   cursor,
@@ -254,12 +256,31 @@ export function MapCanvas({
           ctx.strokeStyle = "rgba(233,240,246,0.9)";
           ctx.lineWidth = 1;
           ctx.beginPath();
-          ctx.arc(x, y, selected ? 5 : 3.4, 0, Math.PI * 2);
+        }
+      }
+      ptsRef.current = pts;
+
+      // ── Delhi-Only Industrial Facilities (purple nodes) ────────────────
+      if (layers.industries && industries && industries.length > 0) {
+        for (const ind of industries) {
+          const ix = X(ind.longitude);
+          const iy = Y(ind.latitude);
+          // Soft purple factory glow
+          ctx.fillStyle = "rgba(168, 85, 247, 0.3)";
+          ctx.beginPath();
+          ctx.arc(ix, iy, 7, 0, Math.PI * 2);
+          ctx.fill();
+
+          // Factory marker
+          ctx.fillStyle = "#9333ea";
+          ctx.strokeStyle = "#ffffff";
+          ctx.lineWidth = 1.2;
+          ctx.beginPath();
+          ctx.arc(ix, iy, 3.5, 0, Math.PI * 2);
           ctx.fill();
           ctx.stroke();
         }
       }
-      ptsRef.current = pts;
 
       // ── Delhi marker ────────────────────────────────────────────────────
       ctx.save();

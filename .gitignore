@@ -49,3 +49,5 @@ data/raw/
 *.pkl
 *.h5
 *.nc
+
+.vercel

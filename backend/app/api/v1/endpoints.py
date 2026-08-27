@@ -39,6 +39,8 @@ from app.services.realtime_service import (
     fetch_city_overview,
     fetch_station_detail,
 )
+from app.schemas.industry import IndustryResponse
+from app.services.industry_service import fetch_delhi_industries
 
 router = APIRouter(prefix="/api/v1")
 limiter = Limiter(key_func=get_remote_address)
@@ -536,6 +538,36 @@ async def health_chat_proxy(request: Request, payload: HealthChatPayload) -> dic
 
     error_summary = "\n".join(f"• {a['model']}: {a.get('error', 'Failed')}" for a in attempts)
     raise HTTPException(status_code=502, detail=f"All {len(models)} fallback models failed:\n{error_summary}")
+
+
+# ── GET /industries ──────────────────────────────────────────────────────────
+
+@router.get(
+    "/industries",
+    response_model=IndustryResponse,
+    summary="Delhi-Only Industrial Facilities & Point-Source Emission Hubs",
+    tags=["Industries"],
+)
+@limiter.limit("60/minute")
+async def get_delhi_industries(
+    request: Request,
+    min_lat: float | None = Query(None, description="Optional minimum latitude for viewport filtering"),
+    max_lat: float | None = Query(None, description="Optional maximum latitude for viewport filtering"),
+    min_lon: float | None = Query(None, description="Optional minimum longitude for viewport filtering"),
+    max_lon: float | None = Query(None, description="Optional maximum longitude for viewport filtering"),
+) -> IndustryResponse:
+    """
+    Retrieves industrial facility records strictly filtered to Delhi (city='Delhi' AND state='Delhi').
+    Queries Supabase directly with server-side database-level filtering, completely excluding
+    Chennai, Tamil Nadu, or any other non-Delhi regions.
+    """
+    return await fetch_delhi_industries(
+        min_lat=min_lat,
+        max_lat=max_lat,
+        min_lon=min_lon,
+        max_lon=max_lon,
+    )
+
 
 
 

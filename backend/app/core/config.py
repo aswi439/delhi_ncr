@@ -60,6 +60,9 @@ class Settings(BaseSettings):
     api_ninjas_api_key: str = ""
     meteosource_api_key: str = ""
     iqair_api_key: str = ""
+    supabase_url: str = ""
+    supabase_key: str = ""
+    supabase_anon_key: str = ""
 
     # No REDIS_URL / SECRET_KEY. Both were declared here and read by nothing:
     # caching is an in-process TTLCache in services/realtime_service.py and there
