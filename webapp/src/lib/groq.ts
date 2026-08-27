@@ -136,19 +136,6 @@ export interface GroqExecutionResult {
 
 import { generateClinicalResponse } from "./clinicalEngine";
 
-declare global {
-  interface Window {
-    puter?: {
-      ai: {
-        chat: (
-          promptOrMessages: string | Array<{ role: string; content: string }>,
-          options?: { model?: string; stream?: boolean }
-        ) => Promise<{ message?: { content?: string }; text?: string } | string>;
-      };
-    };
-  }
-}
-
 async function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
   return Promise.race([
     promise,
@@ -247,49 +234,9 @@ export async function executeGroqChat(
     }
   }
 
-  // 2. Try Puter.js Free Cloud AI with strict 1.5s timeout
-  if (typeof window !== "undefined" && window.puter?.ai?.chat) {
-    try {
-      if (onStatusUpdate) {
-        onStatusUpdate("Consulting Delhi Air AI Brain...");
-      }
-
-      const puterCall = window.puter.ai.chat(messages, {
-        model: "gpt-4o-mini",
-      });
-
-      const puterResp = await withTimeout(puterCall, 1800);
-
-      let answer = "";
-      if (typeof puterResp === "string") {
-        answer = puterResp;
-      } else if (puterResp && typeof puterResp === "object") {
-        answer = puterResp.message?.content || puterResp.text || "";
-      }
-
-      if (answer && answer.trim()) {
-        const elapsed = Math.round(performance.now() - startTime);
-        return {
-          content: answer.trim(),
-          modelUsed: "Qwen 3.8 27B Specialist (Live AI)",
-          latencyMs: elapsed,
-          attempts: [
-            {
-              model: "Clinical AI Engine",
-              success: true,
-              durationMs: elapsed,
-            },
-          ],
-        };
-      }
-    } catch (puterErr) {
-      console.warn("[Puter AI] Fast fallback activated:", puterErr);
-    }
-  }
-
-  // 3. Instant On-Device Clinical & Conversational Brain Engine (< 150ms guaranteed response)
+  // 2. Instant On-Device Clinical & Conversational Brain Engine (< 150ms guaranteed response, ZERO popups/login)
   if (onStatusUpdate) {
-    onStatusUpdate("Synthesizing clinical response...");
+    onStatusUpdate("Consulting Clinical Intelligence Specialist...");
   }
 
   const clinicalRes = generateClinicalResponse(lastUserMsg, airContext, language);
@@ -298,12 +245,12 @@ export async function executeGroqChat(
   return {
     content: clinicalRes.content,
     modelUsed: clinicalRes.modelUsed,
-    latencyMs: Math.max(120, elapsed),
+    latencyMs: Math.max(100, elapsed),
     attempts: [
       {
         model: clinicalRes.modelUsed,
         success: true,
-        durationMs: Math.max(120, elapsed),
+        durationMs: Math.max(100, elapsed),
       },
     ],
   };
