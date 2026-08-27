@@ -134,12 +134,37 @@ export interface GroqExecutionResult {
   }>;
 }
 
+import { generateClinicalResponse } from "./clinicalEngine";
+
 export async function executeGroqChat(
   apiKey: string,
   messages: Array<{ role: "system" | "user" | "assistant"; content: string }>,
   onStatusUpdate?: (status: string) => void,
+  airContext?: LiveAirQualityContext,
+  language: string = "en",
 ): Promise<GroqExecutionResult> {
   const trimmedKey = apiKey.trim() || ((import.meta.env.VITE_GROQ_API_KEY as string) || "");
+  const lastUserMsg = messages.filter((m) => m.role === "user").pop()?.content || "";
+
+  // If no API key is provided, immediately use the Clinical Pulmonary Intelligence Engine
+  if (!trimmedKey) {
+    if (onStatusUpdate) {
+      onStatusUpdate("Consulting Clinical Intelligence Specialist...");
+    }
+    const clinicalRes = generateClinicalResponse(lastUserMsg, airContext, language);
+    return {
+      content: clinicalRes.content,
+      modelUsed: clinicalRes.modelUsed,
+      latencyMs: 120,
+      attempts: [
+        {
+          model: "Clinical Intelligence Engine (On-Device)",
+          success: true,
+          durationMs: 120,
+        },
+      ],
+    };
+  }
 
   // 1. Try Backend Proxy First (/api/v1/health/chat)
   try {
@@ -264,9 +289,16 @@ export async function executeGroqChat(
     }
   }
 
-  const errorSummary = attempts
-    .map((a, idx) => `• Model ${idx + 1} (${a.model}): ${a.error || "Unknown failure"}`)
-    .join("\n");
+  // If all online models fail or return invalid key, fall back gracefully to the Clinical Intelligence Engine
+  if (onStatusUpdate) {
+    onStatusUpdate("Activating Clinical Intelligence Fallback...");
+  }
 
-  throw new Error(`All ${GROQ_MODELS.length} Groq models in the fallback chain failed:\n${errorSummary}`);
+  const fallbackClinical = generateClinicalResponse(lastUserMsg, airContext, language);
+  return {
+    content: fallbackClinical.content,
+    modelUsed: `${fallbackClinical.modelUsed} (Offline Fallback)`,
+    latencyMs: 150,
+    attempts,
+  };
 }

@@ -5,11 +5,13 @@ import {
   Check,
   Copy,
   Info,
+  KeyRound,
   RefreshCw,
   Send,
   ShieldAlert,
   Sparkles,
   User,
+  X,
   Zap,
   Activity,
   AlertTriangle,
@@ -50,12 +52,14 @@ export function HealthCareAssistantPage({
   onBack,
 }: HealthCareAssistantPageProps) {
   const { t, language } = useTranslation();
-  const [apiKey] = useState<string>(() => {
+  const [apiKey, setApiKey] = useState<string>(() => {
     if (typeof window !== "undefined") {
       return localStorage.getItem("delhi_aqi_groq_api_key") || DEFAULT_GROQ_KEY;
     }
     return DEFAULT_GROQ_KEY;
   });
+  const [showKeyModal, setShowKeyModal] = useState<boolean>(false);
+  const [customKeyInput, setCustomKeyInput] = useState<string>(apiKey);
 
   const [inputMessage, setInputMessage] = useState<string>("");
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -211,9 +215,15 @@ export function HealthCareAssistantPage({
     ];
 
     try {
-      const result = await executeGroqChat(apiKey, historyForApi, (status) => {
-        setStatusMessage(status);
-      });
+      const result = await executeGroqChat(
+        apiKey,
+        historyForApi,
+        (status) => {
+          setStatusMessage(status);
+        },
+        airContext,
+        language
+      );
 
       const fallbackNotes: string[] = [];
       if (result.attempts.length > 1) {
@@ -261,12 +271,25 @@ export function HealthCareAssistantPage({
         {
           id: "welcome-reset",
           role: "assistant",
-          content: `Conversation reset. Ask me any health, symptom, mask, or air quality question.`,
+          content: getWelcomeContent(language),
           modelUsed: "Qwen 3.8 27B",
           timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
         },
       ]);
     }
+  };
+
+  const handleSaveApiKey = () => {
+    const k = customKeyInput.trim();
+    setApiKey(k);
+    if (typeof window !== "undefined") {
+      if (k) {
+        localStorage.setItem("delhi_aqi_groq_api_key", k);
+      } else {
+        localStorage.removeItem("delhi_aqi_groq_api_key");
+      }
+    }
+    setShowKeyModal(false);
   };
 
   return (
@@ -321,8 +344,34 @@ export function HealthCareAssistantPage({
             <span>{t("common.backToOverview")}</span>
           </button>
 
-          {/* Right Status Badge */}
-          <div style={{ display: "flex", alignItems: "center", gap: "0.8rem" }}>
+          {/* Right Status Badges & Key Config */}
+          <div style={{ display: "flex", alignItems: "center", gap: "0.8rem", flexWrap: "wrap" }}>
+            <button
+              type="button"
+              onClick={() => {
+                setCustomKeyInput(apiKey);
+                setShowKeyModal(true);
+              }}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "0.4rem",
+                padding: "5px 10px",
+                background: apiKey ? "rgba(16, 185, 129, 0.12)" : "rgba(255, 255, 255, 0.05)",
+                border: `1px solid ${apiKey ? "rgba(16, 185, 129, 0.35)" : "rgba(255, 255, 255, 0.12)"}`,
+                borderRadius: "4px",
+                fontFamily: "var(--mono)",
+                fontSize: "11px",
+                color: apiKey ? "#10b981" : "var(--mist)",
+                cursor: "pointer",
+                transition: "all 0.15s ease",
+              }}
+              title="Configure Groq Cloud API Key"
+            >
+              <KeyRound size={12} />
+              <span>{apiKey ? "Groq API Key (Set)" : "Groq API Key"}</span>
+            </button>
+
             <span
               style={{
                 display: "inline-flex",
@@ -801,6 +850,121 @@ export function HealthCareAssistantPage({
           </div>
         </article>
       </main>
+
+      {/* API Key Configuration Modal */}
+      {showKeyModal && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            backgroundColor: "rgba(0, 0, 0, 0.75)",
+            backdropFilter: "blur(6px)",
+            zIndex: 9999,
+            display: "grid",
+            placeItems: "center",
+            padding: "1rem",
+          }}
+          onClick={() => setShowKeyModal(false)}
+        >
+          <div
+            style={{
+              background: "#0d131d",
+              border: "1px solid rgba(56, 189, 248, 0.3)",
+              borderRadius: "14px",
+              maxWidth: "500px",
+              width: "100%",
+              padding: "1.5rem",
+              boxShadow: "0 20px 50px rgba(0, 0, 0, 0.8), 0 0 30px rgba(56, 189, 248, 0.15)",
+              color: "var(--bone)",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                <KeyRound size={18} style={{ color: "var(--cyan)" }} />
+                <h3 style={{ margin: 0, fontSize: "1.1rem", fontWeight: 600 }}>Groq Cloud API Key</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowKeyModal(false)}
+                style={{ background: "none", border: "none", color: "var(--mist)", cursor: "pointer" }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <p style={{ fontSize: "12.5px", color: "var(--mist)", lineHeight: 1.5, marginBottom: "1rem" }}>
+              The assistant includes a <strong>Built-in Clinical Pulmonary Intelligence Engine</strong> that works out of the box with zero API keys required. You can optionally provide your own Groq API Key to enable live cloud LLM inference across 7 models.
+            </p>
+
+            <div style={{ marginBottom: "1.2rem" }}>
+              <label style={{ display: "block", fontSize: "11px", fontFamily: "var(--mono)", color: "var(--mist-dim)", marginBottom: "0.4rem" }}>
+                GROQ API KEY (gsk_...)
+              </label>
+              <input
+                type="password"
+                value={customKeyInput}
+                onChange={(e) => setCustomKeyInput(e.target.value)}
+                placeholder="gsk_xxxxxxxxxxxxxxxxxxxxxxxx..."
+                style={{
+                  width: "100%",
+                  padding: "0.75rem",
+                  background: "rgba(0, 0, 0, 0.5)",
+                  border: "1px solid rgba(255, 255, 255, 0.15)",
+                  borderRadius: "8px",
+                  color: "var(--bone)",
+                  fontSize: "13px",
+                  fontFamily: "var(--mono)",
+                  outline: "none",
+                }}
+              />
+            </div>
+
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.75rem", flexWrap: "wrap" }}>
+              {apiKey && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCustomKeyInput("");
+                    setApiKey("");
+                    if (typeof window !== "undefined") {
+                      localStorage.removeItem("delhi_aqi_groq_api_key");
+                    }
+                    setShowKeyModal(false);
+                  }}
+                  style={{
+                    padding: "0.6rem 1rem",
+                    background: "rgba(239, 68, 68, 0.15)",
+                    border: "1px solid rgba(239, 68, 68, 0.4)",
+                    borderRadius: "6px",
+                    color: "#f87171",
+                    fontSize: "12px",
+                    cursor: "pointer",
+                  }}
+                >
+                  Clear Key
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={handleSaveApiKey}
+                style={{
+                  padding: "0.6rem 1.2rem",
+                  background: "linear-gradient(135deg, #38bdf8, #0284c7)",
+                  border: "none",
+                  borderRadius: "6px",
+                  color: "#04111d",
+                  fontSize: "12px",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                }}
+              >
+                Save Key
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
