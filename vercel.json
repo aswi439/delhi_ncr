@@ -1,37 +1,19 @@
 {
-  "version": 2,
-  "builds": [
+  "buildCommand": "cd webapp && npm install && npm run build",
+  "outputDirectory": "webapp/dist",
+  "framework": "vite",
+  "rewrites": [
     {
-      "src": "webapp/package.json",
-      "use": "@vercel/static-build",
-      "config": {
-        "distDir": "dist"
-      }
+      "source": "/api/:path*",
+      "destination": "/api/index.py"
     },
     {
-      "src": "api/index.py",
-      "use": "@vercel/python"
-    }
-  ],
-  "routes": [
-    {
-      "src": "/api/(.*)",
-      "dest": "api/index.py"
+      "source": "/docs",
+      "destination": "/api/index.py"
     },
     {
-      "src": "/docs",
-      "dest": "api/index.py"
-    },
-    {
-      "src": "/openapi.json",
-      "dest": "api/index.py"
-    },
-    {
-      "handle": "filesystem"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/webapp/index.html"
+      "source": "/openapi.json",
+      "destination": "/api/index.py"
     }
   ]
 }
