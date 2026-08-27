@@ -136,6 +136,8 @@ async def fetch_delhi_industries(
         or DEFAULT_SUPABASE_KEY
     )
 
+    supabase_records: list[IndustryRecord] = []
+
     # 1. Direct Supabase Query with Database-Level Filtering
     if supabase_url and supabase_key:
         try:
@@ -170,30 +172,30 @@ async def fetch_delhi_industries(
                 resp = await client.get(endpoint, params=params, headers=headers)
                 if resp.status_code == 200:
                     raw_data = resp.json()
-                    valid_records: list[IndustryRecord] = []
                     for row in raw_data:
                         rec = _normalize_raw_record(row)
                         if rec:
-                            valid_records.append(rec)
-
-                    if len(valid_records) > 0:
-                        logger.info("Successfully fetched %d Delhi industry records from Supabase", len(valid_records))
-                        return IndustryResponse(
-                            city="Delhi",
-                            state="Delhi",
-                            count=len(valid_records),
-                            source="supabase",
-                            records=valid_records,
-                        )
+                            supabase_records.append(rec)
+                    logger.info("Successfully fetched %d Delhi industry records from Supabase", len(supabase_records))
                 else:
                     logger.warning("Supabase returned HTTP %d: %s", resp.status_code, resp.text[:200])
         except Exception as e:
             logger.error("Error querying Supabase industries: %s", e)
 
-    # 2. Bundled verified Delhi dataset (534 records) as robust local fallback
+    # 2. Merge Supabase records with the comprehensive 1,865 Delhi industrial directory
     all_delhi_records = _load_csv_industries()
-    filtered: list[IndustryRecord] = []
+    merged_map: dict[str, IndustryRecord] = {}
+
     for rec in all_delhi_records:
+        key = f"{rec.name.lower()}_{round(rec.latitude, 3)}_{round(rec.longitude, 3)}"
+        merged_map[key] = rec
+
+    for rec in supabase_records:
+        key = f"{rec.name.lower()}_{round(rec.latitude, 3)}_{round(rec.longitude, 3)}"
+        merged_map[key] = rec
+
+    filtered: list[IndustryRecord] = []
+    for rec in merged_map.values():
         if min_lat is not None and rec.latitude < min_lat:
             continue
         if max_lat is not None and rec.latitude > max_lat:
@@ -208,6 +210,6 @@ async def fetch_delhi_industries(
         city="Delhi",
         state="Delhi",
         count=len(filtered),
-        source="delhi_dataset_534",
+        source="delhi_master_dataset",
         records=filtered,
     )
