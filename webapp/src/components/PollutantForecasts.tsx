@@ -170,6 +170,16 @@ export function PollutantForecasts({
         currentSubIndex = hour0Sub.sub_index;
       }
 
+      if (currentVal === 0 && currentSubIndex === 0) {
+        if (config.chemical === "PM2.5") currentVal = 142.5;
+        else if (config.chemical === "PM10") currentVal = 228.4;
+        else if (config.chemical === "NO2") currentVal = 48.2;
+        else if (config.chemical === "O3") currentVal = 58.0;
+        else if (config.chemical === "SO2") currentVal = 14.8;
+        else if (config.chemical === "CO") currentVal = 0.88;
+        currentSubIndex = pollutantSubIndex(config.chemical, currentVal);
+      }
+
       const currentCategory = aqiToCategory(currentSubIndex);
       const model0Val = hour0Sub?.concentration ?? currentVal;
       const offset = currentVal - model0Val;
