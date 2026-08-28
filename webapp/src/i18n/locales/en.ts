@@ -7,6 +7,8 @@ export const en = {
     exposure: "Exposure",
     healthAssistant: "Health Assistant",
     alerts: "Alerts",
+    report: "AQI Report",
+    downloadReport: "Download Report",
     index: "Navigation Index",
     selectPage: "Select Page View",
     activeBadge: "ACTIVE",

@@ -14,6 +14,7 @@ import { AtmosphericDynamicsPage } from "@/components/AtmosphericDynamicsPage";
 import { ExposureTrackerPage } from "@/components/ExposureTrackerPage";
 import { HealthCareAssistantPage } from "@/components/HealthCareAssistantPage";
 import { AlertsPage } from "@/components/AlertsPage";
+import { AqiReportPage } from "@/components/AqiReportPage";
 import { PollutantCardStackSection } from "@/components/PollutantCardStackSection";
 import GradualBlur from "@/components/ui/GradualBlur";
 import { useCityAggregate } from "@/hooks/useCityAggregate";
@@ -80,6 +81,12 @@ export default function App() {
       ) {
         return "alerts";
       }
+      if (
+        window.location.hash === "#report" ||
+        window.location.hash === "#aqi-report"
+      ) {
+        return "report";
+      }
     }
     return "overview";
   });
@@ -117,6 +124,11 @@ export default function App() {
         window.location.hash === "#alert"
       ) {
         setCurrentPage("alerts");
+      } else if (
+        window.location.hash === "#report" ||
+        window.location.hash === "#aqi-report"
+      ) {
+        setCurrentPage("report");
       } else if (window.location.hash === "#overview" || window.location.hash === "") {
         setCurrentPage("overview");
       }
@@ -140,6 +152,8 @@ export default function App() {
         ? "health-assistant"
         : page === "alerts"
         ? "alerts"
+        : page === "report"
+        ? "report"
         : "overview";
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
@@ -287,6 +301,18 @@ export default function App() {
           consensus={consensus.data}
           onBack={() => handlePageChange("overview")}
           onNavigate={(p) => handlePageChange(p)}
+        />
+      ) : currentPage === "report" ? (
+        <AqiReportPage
+          forecast={data.forecast}
+          hour={hour}
+          cursor={cursor.cursor}
+          consensus={consensus.data}
+          cityAggregate={cityAggregate.data}
+          stations={data.stations}
+          plume={data.plume}
+          inversion={data.inversion}
+          onBack={() => handlePageChange("overview")}
         />
       ) : (
         <main ref={mainRef}>

@@ -7,6 +7,8 @@ export const hi = {
     exposure: "प्रदूषण प्रभाव",
     healthAssistant: "स्वास्थ्य सहायक",
     alerts: "अलर्ट और चेतावनी",
+    report: "AQI रिपोर्ट",
+    downloadReport: "रिपोर्ट डाउनलोड करें",
     index: "नेविगेशन सूची",
     selectPage: "पृष्ठ दृश्य चुनें",
     activeBadge: "सक्रिय",

@@ -7,6 +7,7 @@ import {
   Layers,
   Bot,
   Bell,
+  Download,
 } from "lucide-react";
 
 import type { Feeds } from "@/hooks/useForecastData";
@@ -20,7 +21,8 @@ export type PageType =
   | "atmospheric-dynamics"
   | "exposure-tracker"
   | "health-assistant"
-  | "alerts";
+  | "alerts"
+  | "report";
 
 export interface RailProps {
   feeds?: Feeds;
@@ -69,8 +71,8 @@ export function Rail({
         zIndex: 40,
       }}
     >
-      {/* Left: Brand Logo */}
-      <div style={{ display: "flex", alignItems: "center", gap: "1.2rem", zIndex: 10 }}>
+      {/* Left: Brand Logo & Download Report Trigger */}
+      <div style={{ display: "flex", alignItems: "center", gap: "1rem", zIndex: 10 }}>
         <div
           className="rail__brand"
           style={{ cursor: "pointer", display: "flex", alignItems: "baseline", gap: "0.5rem" }}
@@ -96,6 +98,35 @@ export function Rail({
             coupled aqi forecast
           </span>
         </div>
+
+        {/* Compact Premium Download Report Action */}
+        {onPageChange && (
+          <button
+            type="button"
+            onClick={() => onPageChange("report")}
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "0.4rem",
+              padding: "0.32rem 0.75rem",
+              background: currentPage === "report" ? "rgba(56, 189, 248, 0.25)" : "rgba(255, 255, 255, 0.08)",
+              border: `1px solid ${currentPage === "report" ? "rgba(56, 189, 248, 0.5)" : "rgba(255, 255, 255, 0.2)"}`,
+              borderRadius: "5px",
+              color: currentPage === "report" ? "var(--cyan)" : "#FFFFFF",
+              fontFamily: "var(--mono)",
+              fontSize: "11px",
+              fontWeight: 600,
+              cursor: "pointer",
+              transition: "all 0.2s cubic-bezier(0.16, 1, 0.3, 1)",
+              boxShadow: currentPage === "report" ? "0 0 12px rgba(56, 189, 248, 0.4)" : "0 2px 6px rgba(0,0,0,0.3)",
+              whiteSpace: "nowrap",
+            }}
+            title="Download Official Delhi-NCR AQI Intelligence Report"
+          >
+            <Download size={12} style={{ color: "var(--cyan)" }} />
+            <span>{t("navigation.downloadReport") || "Download Report"}</span>
+          </button>
+        )}
       </div>
 
       {/* Center: Dedicated Top Navigation Pill Bar */}

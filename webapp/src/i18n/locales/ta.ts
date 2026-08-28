@@ -7,6 +7,8 @@ export const ta = {
     exposure: "மாசு வெளிப்பாடு",
     healthAssistant: "சுகாதார உதவியாளர்",
     alerts: "எச்சரிக்கைகள்",
+    report: "AQI அறிக்கை",
+    downloadReport: "அறிக்கையைப் பதிவிறக்கவும்",
     index: "பக்கங்களின் பட்டியல்",
     selectPage: "பக்கத்தைத் தேர்ந்தெடுக்கவும்",
     activeBadge: "செயலில்",
