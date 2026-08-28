@@ -1,16 +1,7 @@
-import { useState } from "react";
 import {
   RotateCw,
-  Menu,
-  X,
-  TrendingUp,
   History,
   CloudRain,
-  Thermometer,
-  MapPin,
-  LayoutGrid,
-  CheckCircle2,
-  ChevronRight,
   HeartPulse,
   BarChart3,
   Layers,
@@ -48,693 +39,260 @@ export function Rail({
   onRefresh,
   currentPage = "overview",
   onPageChange,
-  activeVideo: _activeVideo = 0,
-  onVideoChange: _onVideoChange,
   unreadAlertsCount = 0,
   hasCriticalAlert = false,
 }: RailProps) {
   const { t } = useTranslation();
-  const [menuOpen, setMenuOpen] = useState(false);
-
-  const overviewNavItems = [
-    { id: "forecast-hero", label: "72-Hour Prognostic Forecast", icon: TrendingUp, desc: "Hourly AQI outlook & CPCB sub-indices" },
-    { id: "pollutant-card-stack", label: "3D Pollutant Particle Stack", icon: Layers, desc: "Interactive 6-species criteria breakdown" },
-    { id: "consensus-dashboard", label: "Delhi NCR Live Conditions", icon: CheckCircle2, desc: "5-source multi-provider ensemble & confidence" },
-    { id: "station-map-view", label: "Spatial Dispersion Map", icon: MapPin, desc: "Plume vector contours & 43 CAAQMS stations" },
-    { id: "source-apportionment", label: "Source Apportionment", icon: Thermometer, desc: "Vehicular, dust, industrial & biomass attribution" },
-    { id: "stations-grid", label: "Real-Time Stations Network", icon: LayoutGrid, desc: "Continuous ambient monitoring network metrics" },
-  ];
 
   const handleSelectPage = (page: PageType) => {
-    setMenuOpen(false);
     if (onPageChange) {
       onPageChange(page);
     }
   };
 
   return (
-    <>
-      <header
-        className="rail"
-        style={{
-          position: "absolute",
-          top: 0,
-          left: 0,
-          right: 0,
-          width: "100%",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          padding: "0.85rem clamp(1rem, 3vw, 2.5rem)",
-          background: "transparent",
-          border: "none",
-          boxShadow: "none",
-          zIndex: 40,
-        }}
-      >
-        {/* Left: Brand & Menu (Zero Dark Background) */}
-        <div style={{ display: "flex", alignItems: "center", gap: "1.2rem", zIndex: 10 }}>
-          {/* Transparent Menu Button */}
-          <button
-            type="button"
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: "0.4rem",
-              padding: "0.35rem 0.7rem",
-              background: "transparent",
-              border: "1px solid rgba(255, 255, 255, 0.25)",
-              borderRadius: "4px",
-              color: "#FFFFFF",
-              fontFamily: "var(--mono)",
-              fontSize: "11.5px",
-              fontWeight: 500,
-              cursor: "pointer",
-              transition: "all 0.2s ease",
-              textShadow: "0 1px 4px rgba(0,0,0,0.8)",
-            }}
-            onClick={() => setMenuOpen(!menuOpen)}
-            aria-expanded={menuOpen}
-            aria-label="Navigation Menu"
-          >
-            {menuOpen ? <X size={14} /> : <Menu size={14} />}
-            <span>Menu</span>
-          </button>
-
-          <div
-            className="rail__brand"
-            style={{ cursor: "pointer", display: "flex", alignItems: "baseline", gap: "0.5rem" }}
-            onClick={() => handleSelectPage("overview")}
-            title="Return to Main Overview Console"
-          >
-            <span
-              style={{
-                width: "8px",
-                height: "8px",
-                backgroundColor: "var(--live)",
-                borderRadius: "1px",
-                transform: "rotate(45deg)",
-                boxShadow: "0 0 10px var(--live)",
-                alignSelf: "center",
-              }}
-              aria-hidden="true"
-            />
-            <span style={{ fontFamily: "var(--mono)", fontWeight: 700, fontSize: "14px", color: "#FFFFFF", letterSpacing: "0.06em", textShadow: "0 1px 4px rgba(0,0,0,0.8)" }}>
-              NCR<span style={{ color: "var(--live)" }}>·</span>72
-            </span>
-            <span style={{ fontFamily: "var(--mono)", fontSize: "10.5px", color: "rgba(255, 255, 255, 0.55)", letterSpacing: "0.15em", textTransform: "uppercase" }}>
-              coupled aqi forecast
-            </span>
-          </div>
-        </div>
-
-        {/* Center: Dedicated Top Navigation Pill Bar */}
-        {onPageChange && (
-          <div
-            style={{
-              position: "absolute",
-              left: "50%",
-              top: "50%",
-              transform: "translate(-50%, -50%)",
-              zIndex: 50,
-              pointerEvents: "auto",
-              maxWidth: "calc(100vw - 320px)",
-            }}
-          >
-            <div
-              className="liquid-glass"
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "0.25rem",
-                padding: "0.28rem 0.35rem",
-                borderRadius: "9999px",
-                background: "rgba(12, 16, 26, 0.65)",
-                backdropFilter: "blur(24px) saturate(180%)",
-                WebkitBackdropFilter: "blur(24px) saturate(180%)",
-                border: "1px solid rgba(255, 255, 255, 0.2)",
-                boxShadow: "0 8px 32px rgba(0, 0, 0, 0.5), inset 0 1px 1.5px rgba(255, 255, 255, 0.25)",
-                overflowX: "auto",
-                maxWidth: "100%",
-              }}
-            >
-              {[
-                { id: "overview", label: t("navigation.overview"), icon: Layers },
-                { id: "forecast-datas", label: t("navigation.forecast"), icon: BarChart3 },
-                { id: "historic-data", label: t("navigation.historic"), icon: History },
-                { id: "atmospheric-dynamics", label: t("navigation.atmosphere"), icon: CloudRain },
-                { id: "exposure-tracker", label: t("navigation.exposure"), icon: HeartPulse },
-                { id: "health-assistant", label: t("navigation.healthAssistant"), icon: Bot },
-              ].map((btn) => {
-                const isActive = currentPage === btn.id;
-                const Icon = btn.icon;
-                return (
-                  <button
-                    key={btn.id}
-                    type="button"
-                    onClick={() => onPageChange(btn.id as PageType)}
-                    style={{
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: "0.35rem",
-                      padding: "0.32rem 0.75rem",
-                      borderRadius: "9999px",
-                      background: isActive ? "rgba(255, 255, 255, 0.2)" : "transparent",
-                      border: `1px solid ${isActive ? "rgba(255, 255, 255, 0.38)" : "transparent"}`,
-                      boxShadow: isActive
-                        ? "0 2px 8px rgba(0, 0, 0, 0.3), inset 0 1px 1px rgba(255, 255, 255, 0.35)"
-                        : "none",
-                      color: isActive ? "#FFFFFF" : "rgba(255, 255, 255, 0.75)",
-                      fontFamily: "var(--mono)",
-                      fontSize: "11.5px",
-                      fontWeight: isActive ? 600 : 400,
-                      cursor: "pointer",
-                      transition: "all 0.2s cubic-bezier(0.16, 1, 0.3, 1)",
-                      whiteSpace: "nowrap",
-                      outline: "none",
-                    }}
-                    onMouseEnter={(e) => {
-                      if (!isActive) {
-                        e.currentTarget.style.color = "#FFFFFF";
-                        e.currentTarget.style.background = "rgba(255, 255, 255, 0.08)";
-                      }
-                    }}
-                    onMouseLeave={(e) => {
-                      if (!isActive) {
-                        e.currentTarget.style.color = "rgba(255, 255, 255, 0.75)";
-                        e.currentTarget.style.background = "transparent";
-                      }
-                    }}
-                  >
-                    <Icon
-                      size={12.5}
-                      style={{
-                        color: isActive ? "var(--live)" : "rgba(255, 255, 255, 0.6)",
-                        transition: "color 0.25s ease",
-                      }}
-                    />
-                    <span>{btn.label}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
-        {/* Right: Alert Bell Quick Icon, Timestamp, Refresh & Language Selector */}
+    <header
+      className="rail"
+      style={{
+        position: "absolute",
+        top: 0,
+        left: 0,
+        right: 0,
+        width: "100%",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        padding: "0.85rem clamp(1rem, 3vw, 2.5rem)",
+        background: "transparent",
+        border: "none",
+        boxShadow: "none",
+        zIndex: 40,
+      }}
+    >
+      {/* Left: Brand Logo */}
+      <div style={{ display: "flex", alignItems: "center", gap: "1.2rem", zIndex: 10 }}>
         <div
-          style={{
-            marginLeft: "auto",
-            display: "flex",
-            alignItems: "center",
-            gap: "0.75rem",
-            zIndex: 10,
-          }}
+          className="rail__brand"
+          style={{ cursor: "pointer", display: "flex", alignItems: "baseline", gap: "0.5rem" }}
+          onClick={() => handleSelectPage("overview")}
+          title="Return to Main Overview Console"
         >
-          {/* Dedicated Header Bell Quick Button */}
-          {onPageChange && (
-            <button
-              type="button"
-              onClick={() => onPageChange("alerts")}
-              style={{
-                position: "relative",
-                display: "inline-flex",
-                alignItems: "center",
-                justifyContent: "center",
-                width: "32px",
-                height: "32px",
-                background: currentPage === "alerts" ? "rgba(168, 85, 247, 0.35)" : "rgba(255, 255, 255, 0.08)",
-                border: `1px solid ${currentPage === "alerts" ? "#a855f7" : "rgba(255, 255, 255, 0.22)"}`,
-                borderRadius: "50%",
-                color: currentPage === "alerts" ? "#FFFFFF" : "rgba(255, 255, 255, 0.85)",
-                cursor: "pointer",
-                transition: "all 0.2s cubic-bezier(0.16, 1, 0.3, 1)",
-                boxShadow: currentPage === "alerts" ? "0 0 12px rgba(168, 85, 247, 0.5)" : "none",
-              }}
-              title={t("header.alertsTooltip")}
-              aria-label="Real-time Alerts"
-            >
-              <Bell size={14} style={{ color: currentPage === "alerts" || unreadAlertsCount > 0 ? "#c084fc" : undefined }} />
-              {unreadAlertsCount > 0 && (
-                <span
-                  className={hasCriticalAlert ? "alert-bell-pulse" : ""}
-                  style={{
-                    position: "absolute",
-                    top: "-2px",
-                    right: "-2px",
-                    minWidth: "16px",
-                    height: "16px",
-                    padding: "0 4px",
-                    borderRadius: "9999px",
-                    background: hasCriticalAlert ? "#ef4444" : "#a855f7",
-                    color: "#FFFFFF",
-                    fontSize: "9px",
-                    fontWeight: 700,
-                    fontFamily: "var(--mono)",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    boxShadow: hasCriticalAlert ? "0 0 8px #ef4444" : "0 0 6px #a855f7",
-                    lineHeight: 1,
-                  }}
-                >
-                  {unreadAlertsCount > 9 ? "9+" : unreadAlertsCount}
-                </span>
-              )}
-            </button>
-          )}
-
           <span
             style={{
-              fontFamily: "var(--mono)",
-              fontSize: "11px",
-              color: "rgba(255, 255, 255, 0.6)",
-              fontVariantNumeric: "tabular-nums",
-              whiteSpace: "nowrap",
-              textShadow: "0 1px 4px rgba(0,0,0,0.8)",
+              width: "8px",
+              height: "8px",
+              backgroundColor: "var(--live)",
+              borderRadius: "1px",
+              transform: "rotate(45deg)",
+              boxShadow: "0 0 10px var(--live)",
+              alignSelf: "center",
             }}
-          >
-            {stamp}
+            aria-hidden="true"
+          />
+          <span style={{ fontFamily: "var(--mono)", fontWeight: 700, fontSize: "14px", color: "#FFFFFF", letterSpacing: "0.06em", textShadow: "0 1px 4px rgba(0,0,0,0.8)" }}>
+            NCR<span style={{ color: "var(--live)" }}>·</span>72
           </span>
-          <button
-            type="button"
-            onClick={onRefresh}
+          <span style={{ fontFamily: "var(--mono)", fontSize: "10.5px", color: "rgba(255, 255, 255, 0.55)", letterSpacing: "0.15em", textTransform: "uppercase" }}>
+            coupled aqi forecast
+          </span>
+        </div>
+      </div>
+
+      {/* Center: Dedicated Top Navigation Pill Bar */}
+      {onPageChange && (
+        <div
+          style={{
+            position: "absolute",
+            left: "50%",
+            top: "50%",
+            transform: "translate(-50%, -50%)",
+            zIndex: 50,
+            pointerEvents: "auto",
+            maxWidth: "calc(100vw - 320px)",
+          }}
+        >
+          <div
+            className="liquid-glass"
             style={{
               display: "inline-flex",
               alignItems: "center",
-              gap: "0.4rem",
-              padding: "0.32rem 0.65rem",
-              background: "transparent",
-              border: "1px solid rgba(255, 255, 255, 0.25)",
-              borderRadius: "4px",
-              color: "#FFFFFF",
-              fontFamily: "var(--mono)",
-              fontSize: "11.5px",
-              fontWeight: 500,
-              cursor: "pointer",
-              transition: "all 0.2s ease",
-              textShadow: "0 1px 4px rgba(0,0,0,0.8)",
+              gap: "0.25rem",
+              padding: "0.28rem 0.35rem",
+              borderRadius: "9999px",
+              background: "rgba(12, 16, 26, 0.65)",
+              backdropFilter: "blur(24px) saturate(180%)",
+              WebkitBackdropFilter: "blur(24px) saturate(180%)",
+              border: "1px solid rgba(255, 255, 255, 0.2)",
+              boxShadow: "0 8px 32px rgba(0, 0, 0, 0.5), inset 0 1px 1.5px rgba(255, 255, 255, 0.25)",
+              overflowX: "auto",
+              maxWidth: "100%",
             }}
           >
-            <RotateCw size={12} aria-hidden="true" />
-            <span>{t("header.refresh")}</span>
-          </button>
-
-          {/* Premium Language Selector (Top Right Box) */}
-          <LanguageSelector />
-        </div>
-      </header>
-
-      {/* Navigation Menu Drawer / Dropdown */}
-      {menuOpen && (
-        <div
-          style={{
-            position: "fixed",
-            top: "48px",
-            left: "0",
-            right: "0",
-            bottom: "0",
-            background: "rgba(0, 0, 0, 0.8)",
-            backdropFilter: "blur(8px)",
-            zIndex: 9999,
-            display: "flex",
-            justifyContent: "flex-start",
-          }}
-          onClick={() => setMenuOpen(false)}
-        >
-          <div
-            style={{
-              width: "100%",
-              maxWidth: "440px",
-              height: "100%",
-              background: "var(--abyss)",
-              borderRight: "1px solid var(--hairline)",
-              padding: "1.5rem",
-              overflowY: "auto",
-              boxShadow: "4px 0 24px rgba(0, 0, 0, 0.6)",
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                marginBottom: "1.2rem",
-                paddingBottom: "1rem",
-                borderBottom: "1px solid var(--hairline)",
-              }}
-            >
-              <div>
-                <h3 style={{ margin: 0, fontSize: "1.1rem", color: "var(--bone)" }}>{t("navigation.index")}</h3>
-                <p style={{ margin: "0.2rem 0 0", fontSize: "12px", color: "var(--mist-faint)" }}>
-                  {t("navigation.selectPage")}
-                </p>
-              </div>
-              <button
-                type="button"
-                className="btn btn--solid"
-                style={{ padding: "0.3rem 0.5rem", cursor: "pointer" }}
-                onClick={() => setMenuOpen(false)}
-                aria-label="Close menu"
-              >
-                <X size={16} />
-              </button>
-            </div>
-
-            {/* Language Selector Section for Mobile / Drawer */}
-            <div style={{ marginBottom: "1.4rem", paddingBottom: "1rem", borderBottom: "1px solid var(--hairline)" }}>
-              <div
-                style={{
-                  fontSize: "10.5px",
-                  fontFamily: "var(--mono)",
-                  color: "var(--mist-dim)",
-                  textTransform: "uppercase",
-                  letterSpacing: "0.18em",
-                  marginBottom: "0.6rem",
-                }}
-              >
-                {t("header.language")} / Language
-              </div>
-              <LanguageSelector />
-            </div>
-
-            {/* Dedicated Pages Selector */}
-            <div style={{ marginBottom: "1.8rem" }}>
-              <div
-                style={{
-                  fontSize: "10.5px",
-                  fontFamily: "var(--mono)",
-                  color: "var(--mist-dim)",
-                  textTransform: "uppercase",
-                  letterSpacing: "0.18em",
-                  marginBottom: "0.75rem",
-                }}
-              >
-                {t("navigation.selectPage")}
-              </div>
-
-              <div style={{ display: "flex", flexDirection: "column", gap: "0.55rem" }}>
+            {[
+              { id: "overview", label: t("navigation.overview"), icon: Layers },
+              { id: "forecast-datas", label: t("navigation.forecast"), icon: BarChart3 },
+              { id: "historic-data", label: t("navigation.historic"), icon: History },
+              { id: "atmospheric-dynamics", label: t("navigation.atmosphere"), icon: CloudRain },
+              { id: "exposure-tracker", label: t("navigation.exposure"), icon: HeartPulse },
+              { id: "health-assistant", label: t("navigation.healthAssistant"), icon: Bot },
+            ].map((btn) => {
+              const isActive = currentPage === btn.id;
+              const Icon = btn.icon;
+              return (
                 <button
+                  key={btn.id}
                   type="button"
-                  onClick={() => handleSelectPage("overview")}
+                  onClick={() => onPageChange(btn.id as PageType)}
                   style={{
-                    display: "flex",
+                    display: "inline-flex",
                     alignItems: "center",
-                    justifyContent: "space-between",
-                    padding: "0.8rem 0.95rem",
-                    background: currentPage === "overview" ? "var(--slab-hi)" : "var(--slab)",
-                    border: `1px solid ${currentPage === "overview" ? "var(--live)" : "var(--hairline)"}`,
-                    borderRadius: "4px",
+                    gap: "0.35rem",
+                    padding: "0.32rem 0.75rem",
+                    borderRadius: "9999px",
+                    background: isActive ? "rgba(255, 255, 255, 0.2)" : "transparent",
+                    border: `1px solid ${isActive ? "rgba(255, 255, 255, 0.38)" : "transparent"}`,
+                    boxShadow: isActive
+                      ? "0 2px 8px rgba(0, 0, 0, 0.3), inset 0 1px 1px rgba(255, 255, 255, 0.35)"
+                      : "none",
+                    color: isActive ? "#FFFFFF" : "rgba(255, 255, 255, 0.75)",
+                    fontFamily: "var(--mono)",
+                    fontSize: "11.5px",
+                    fontWeight: isActive ? 600 : 400,
                     cursor: "pointer",
-                    textAlign: "left",
-                    transition: "all 0.2s ease",
+                    transition: "all 0.2s cubic-bezier(0.16, 1, 0.3, 1)",
+                    whiteSpace: "nowrap",
+                    outline: "none",
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!isActive) {
+                      e.currentTarget.style.color = "#FFFFFF";
+                      e.currentTarget.style.background = "rgba(255, 255, 255, 0.08)";
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!isActive) {
+                      e.currentTarget.style.color = "rgba(255, 255, 255, 0.75)";
+                      e.currentTarget.style.background = "transparent";
+                    }
                   }}
                 >
-                  <div style={{ display: "flex", alignItems: "flex-start", gap: "0.75rem" }}>
-                    <Layers size={18} style={{ color: currentPage === "overview" ? "var(--live)" : "var(--mist)", marginTop: "2px" }} />
-                    <div>
-                      <div style={{ color: "var(--bone)", fontSize: "13px", fontWeight: 600, display: "flex", alignItems: "center", gap: "0.4rem" }}>
-                        <span>{t("navigation.overview")}</span>
-                        {currentPage === "overview" && (
-                          <span style={{ fontSize: "10px", background: "var(--live)", color: "#000", padding: "1px 5px", borderRadius: "3px", fontWeight: 700 }}>
-                            {t("navigation.activeBadge")}
-                          </span>
-                        )}
-                      </div>
-                      <div style={{ color: "var(--mist-dim)", fontSize: "11.5px", marginTop: "2px" }}>
-                        {t("hero.networkAggregate")}
-                      </div>
-                    </div>
-                  </div>
-                  <ChevronRight size={16} style={{ color: "var(--mist-faint)" }} />
+                  <Icon
+                    size={12.5}
+                    style={{
+                      color: isActive ? "var(--live)" : "rgba(255, 255, 255, 0.6)",
+                      transition: "color 0.25s ease",
+                    }}
+                  />
+                  <span>{btn.label}</span>
                 </button>
-
-                <button
-                  type="button"
-                  onClick={() => handleSelectPage("forecast-datas")}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    padding: "0.8rem 0.95rem",
-                    background: currentPage === "forecast-datas" ? "var(--slab-hi)" : "var(--slab)",
-                    border: `1px solid ${currentPage === "forecast-datas" ? "var(--live)" : "var(--hairline)"}`,
-                    borderRadius: "4px",
-                    cursor: "pointer",
-                    textAlign: "left",
-                    transition: "all 0.2s ease",
-                  }}
-                >
-                  <div style={{ display: "flex", alignItems: "flex-start", gap: "0.75rem" }}>
-                    <BarChart3 size={18} style={{ color: currentPage === "forecast-datas" ? "var(--live)" : "var(--mist)", marginTop: "2px" }} />
-                    <div>
-                      <div style={{ color: "var(--bone)", fontSize: "13px", fontWeight: 600, display: "flex", alignItems: "center", gap: "0.4rem" }}>
-                        <span>{t("navigation.forecast")}</span>
-                        {currentPage === "forecast-datas" && (
-                          <span style={{ fontSize: "10px", background: "var(--live)", color: "#000", padding: "1px 5px", borderRadius: "3px", fontWeight: 700 }}>
-                            {t("navigation.activeBadge")}
-                          </span>
-                        )}
-                      </div>
-                      <div style={{ color: "var(--mist-dim)", fontSize: "11.5px", marginTop: "2px" }}>
-                        {t("forecast.title")}
-                      </div>
-                    </div>
-                  </div>
-                  <ChevronRight size={16} style={{ color: "var(--mist-faint)" }} />
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => handleSelectPage("historic-data")}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    padding: "0.8rem 0.95rem",
-                    background: currentPage === "historic-data" ? "var(--slab-hi)" : "var(--slab)",
-                    border: `1px solid ${currentPage === "historic-data" ? "var(--live)" : "var(--hairline)"}`,
-                    borderRadius: "4px",
-                    cursor: "pointer",
-                    textAlign: "left",
-                    transition: "all 0.2s ease",
-                  }}
-                >
-                  <div style={{ display: "flex", alignItems: "flex-start", gap: "0.75rem" }}>
-                    <History size={18} style={{ color: currentPage === "historic-data" ? "var(--live)" : "var(--mist)", marginTop: "2px" }} />
-                    <div>
-                      <div style={{ color: "var(--bone)", fontSize: "13px", fontWeight: 600, display: "flex", alignItems: "center", gap: "0.4rem" }}>
-                        <span>{t("navigation.historic")}</span>
-                        {currentPage === "historic-data" && (
-                          <span style={{ fontSize: "10px", background: "var(--live)", color: "#000", padding: "1px 5px", borderRadius: "3px", fontWeight: 700 }}>
-                            {t("navigation.activeBadge")}
-                          </span>
-                        )}
-                      </div>
-                      <div style={{ color: "var(--mist-dim)", fontSize: "11.5px", marginTop: "2px" }}>
-                        {t("historic.title")}
-                      </div>
-                    </div>
-                  </div>
-                  <ChevronRight size={16} style={{ color: "var(--mist-faint)" }} />
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => handleSelectPage("atmospheric-dynamics")}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    padding: "0.8rem 0.95rem",
-                    background: currentPage === "atmospheric-dynamics" ? "var(--slab-hi)" : "var(--slab)",
-                    border: `1px solid ${currentPage === "atmospheric-dynamics" ? "var(--live)" : "var(--hairline)"}`,
-                    borderRadius: "4px",
-                    cursor: "pointer",
-                    textAlign: "left",
-                    transition: "all 0.2s ease",
-                  }}
-                >
-                  <div style={{ display: "flex", alignItems: "flex-start", gap: "0.75rem" }}>
-                    <CloudRain size={18} style={{ color: currentPage === "atmospheric-dynamics" ? "var(--live)" : "var(--mist)", marginTop: "2px" }} />
-                    <div>
-                      <div style={{ color: "var(--bone)", fontSize: "13px", fontWeight: 600, display: "flex", alignItems: "center", gap: "0.4rem" }}>
-                        <span>{t("navigation.atmosphere")}</span>
-                        {currentPage === "atmospheric-dynamics" && (
-                          <span style={{ fontSize: "10px", background: "var(--live)", color: "#000", padding: "1px 5px", borderRadius: "3px", fontWeight: 700 }}>
-                            {t("navigation.activeBadge")}
-                          </span>
-                        )}
-                      </div>
-                      <div style={{ color: "var(--mist-dim)", fontSize: "11.5px", marginTop: "2px" }}>
-                        {t("atmosphere.title")}
-                      </div>
-                    </div>
-                  </div>
-                  <ChevronRight size={16} style={{ color: "var(--mist-faint)" }} />
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => handleSelectPage("exposure-tracker")}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    padding: "0.8rem 0.95rem",
-                    background: currentPage === "exposure-tracker" ? "var(--slab-hi)" : "var(--slab)",
-                    border: `1px solid ${currentPage === "exposure-tracker" ? "var(--live)" : "var(--hairline)"}`,
-                    borderRadius: "4px",
-                    cursor: "pointer",
-                    textAlign: "left",
-                    transition: "all 0.2s ease",
-                  }}
-                >
-                  <div style={{ display: "flex", alignItems: "flex-start", gap: "0.75rem" }}>
-                    <HeartPulse size={18} style={{ color: currentPage === "exposure-tracker" ? "var(--live)" : "var(--mist)", marginTop: "2px" }} />
-                    <div>
-                      <div style={{ color: "var(--bone)", fontSize: "13px", fontWeight: 600, display: "flex", alignItems: "center", gap: "0.4rem" }}>
-                        <span>{t("navigation.exposure")}</span>
-                        {currentPage === "exposure-tracker" && (
-                          <span style={{ fontSize: "10px", background: "var(--live)", color: "#000", padding: "1px 5px", borderRadius: "3px", fontWeight: 700 }}>
-                            {t("navigation.activeBadge")}
-                          </span>
-                        )}
-                      </div>
-                      <div style={{ color: "var(--mist-dim)", fontSize: "11.5px", marginTop: "2px" }}>
-                        {t("exposure.title")}
-                      </div>
-                    </div>
-                  </div>
-                  <ChevronRight size={16} style={{ color: "var(--mist-faint)" }} />
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => handleSelectPage("health-assistant")}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    padding: "0.8rem 0.95rem",
-                    background: currentPage === "health-assistant" ? "var(--slab-hi)" : "var(--slab)",
-                    border: `1px solid ${currentPage === "health-assistant" ? "var(--live)" : "var(--hairline)"}`,
-                    borderRadius: "4px",
-                    cursor: "pointer",
-                    textAlign: "left",
-                    transition: "all 0.2s ease",
-                  }}
-                >
-                  <div style={{ display: "flex", alignItems: "flex-start", gap: "0.75rem" }}>
-                    <Bot size={18} style={{ color: currentPage === "health-assistant" ? "var(--live)" : "var(--mist)", marginTop: "2px" }} />
-                    <div>
-                      <div style={{ color: "var(--bone)", fontSize: "13px", fontWeight: 600, display: "flex", alignItems: "center", gap: "0.4rem" }}>
-                        <span>{t("navigation.healthAssistant")}</span>
-                        {currentPage === "health-assistant" && (
-                          <span style={{ fontSize: "10px", background: "var(--live)", color: "#000", padding: "1px 5px", borderRadius: "3px", fontWeight: 700 }}>
-                            {t("navigation.activeBadge")}
-                          </span>
-                        )}
-                      </div>
-                      <div style={{ color: "var(--mist-dim)", fontSize: "11.5px", marginTop: "2px" }}>
-                        {t("healthAssistant.title")}
-                      </div>
-                    </div>
-                  </div>
-                  <ChevronRight size={16} style={{ color: "var(--mist-faint)" }} />
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => handleSelectPage("alerts")}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    padding: "0.8rem 0.95rem",
-                    background: currentPage === "alerts" ? "var(--slab-hi)" : "var(--slab)",
-                    border: `1px solid ${currentPage === "alerts" ? "var(--live)" : "var(--hairline)"}`,
-                    borderRadius: "4px",
-                    cursor: "pointer",
-                    textAlign: "left",
-                    transition: "all 0.2s ease",
-                  }}
-                >
-                  <div style={{ display: "flex", alignItems: "flex-start", gap: "0.75rem" }}>
-                    <Bell size={18} style={{ color: currentPage === "alerts" ? "var(--live)" : unreadAlertsCount > 0 ? "#c084fc" : "var(--mist)", marginTop: "2px" }} />
-                    <div>
-                      <div style={{ color: "var(--bone)", fontSize: "13px", fontWeight: 600, display: "flex", alignItems: "center", gap: "0.4rem" }}>
-                        <span>{t("navigation.alerts")}</span>
-                        {unreadAlertsCount > 0 && (
-                          <span style={{ fontSize: "10px", background: hasCriticalAlert ? "#ef4444" : "#a855f7", color: "#FFFFFF", padding: "1px 5px", borderRadius: "3px", fontWeight: 700 }}>
-                            {unreadAlertsCount} NEW
-                          </span>
-                        )}
-                      </div>
-                      <div style={{ color: "var(--mist-dim)", fontSize: "11.5px", marginTop: "2px" }}>
-                        {t("alerts.title")}
-                      </div>
-                    </div>
-                  </div>
-                  <ChevronRight size={16} style={{ color: "var(--mist-faint)" }} />
-                </button>
-              </div>
-            </div>
-
-            {/* Overview Anchors */}
-            <div>
-              <div
-                style={{
-                  fontSize: "10.5px",
-                  fontFamily: "var(--mono)",
-                  color: "var(--mist-dim)",
-                  textTransform: "uppercase",
-                  letterSpacing: "0.18em",
-                  marginBottom: "0.75rem",
-                }}
-              >
-                Overview Page Jump Links
-              </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem" }}>
-                {overviewNavItems.map((item) => {
-                  const Icon = item.icon;
-                  return (
-                    <a
-                      key={item.id}
-                      href={`#${item.id}`}
-                      onClick={() => {
-                        handleSelectPage("overview");
-                        setTimeout(() => {
-                          const el = document.getElementById(item.id);
-                          if (el) el.scrollIntoView({ behavior: "smooth" });
-                        }, 100);
-                      }}
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "0.75rem",
-                        padding: "0.6rem 0.8rem",
-                        color: "var(--mist)",
-                        textDecoration: "none",
-                        borderRadius: "3px",
-                        fontSize: "12px",
-                        background: "rgba(255, 255, 255, 0.02)",
-                      }}
-                    >
-                      <Icon size={14} style={{ color: "var(--live)", flexShrink: 0 }} />
-                      <div>
-                        <div style={{ color: "var(--bone)", fontWeight: 500 }}>{item.label}</div>
-                        <div style={{ color: "var(--mist-faint)", fontSize: "10.5px" }}>{item.desc}</div>
-                      </div>
-                    </a>
-                  );
-                })}
-              </div>
-            </div>
+              );
+            })}
           </div>
         </div>
       )}
-    </>
+
+      {/* Right: Alert Bell Quick Icon, Timestamp, Refresh & Language Selector */}
+      <div
+        style={{
+          marginLeft: "auto",
+          display: "flex",
+          alignItems: "center",
+          gap: "0.75rem",
+          zIndex: 10,
+        }}
+      >
+        {/* Dedicated Header Bell Quick Button */}
+        {onPageChange && (
+          <button
+            type="button"
+            onClick={() => onPageChange("alerts")}
+            style={{
+              position: "relative",
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              width: "32px",
+              height: "32px",
+              background: currentPage === "alerts" ? "rgba(168, 85, 247, 0.35)" : "rgba(255, 255, 255, 0.08)",
+              border: `1px solid ${currentPage === "alerts" ? "#a855f7" : "rgba(255, 255, 255, 0.22)"}`,
+              borderRadius: "50%",
+              color: currentPage === "alerts" ? "#FFFFFF" : "rgba(255, 255, 255, 0.85)",
+              cursor: "pointer",
+              transition: "all 0.2s cubic-bezier(0.16, 1, 0.3, 1)",
+              boxShadow: currentPage === "alerts" ? "0 0 12px rgba(168, 85, 247, 0.5)" : "none",
+            }}
+            title={t("header.alertsTooltip")}
+            aria-label="Real-time Alerts"
+          >
+            <Bell size={14} style={{ color: currentPage === "alerts" || unreadAlertsCount > 0 ? "#c084fc" : undefined }} />
+            {unreadAlertsCount > 0 && (
+              <span
+                className={hasCriticalAlert ? "alert-bell-pulse" : ""}
+                style={{
+                  position: "absolute",
+                  top: "-2px",
+                  right: "-2px",
+                  minWidth: "16px",
+                  height: "16px",
+                  padding: "0 4px",
+                  borderRadius: "9999px",
+                  background: hasCriticalAlert ? "#ef4444" : "#a855f7",
+                  color: "#FFFFFF",
+                  fontSize: "9px",
+                  fontWeight: 700,
+                  fontFamily: "var(--mono)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  boxShadow: hasCriticalAlert ? "0 0 8px #ef4444" : "0 0 6px #a855f7",
+                  lineHeight: 1,
+                }}
+              >
+                {unreadAlertsCount > 9 ? "9+" : unreadAlertsCount}
+              </span>
+            )}
+          </button>
+        )}
+
+        <span
+          style={{
+            fontFamily: "var(--mono)",
+            fontSize: "11px",
+            color: "rgba(255, 255, 255, 0.6)",
+            fontVariantNumeric: "tabular-nums",
+            whiteSpace: "nowrap",
+            textShadow: "0 1px 4px rgba(0,0,0,0.8)",
+          }}
+        >
+          {stamp}
+        </span>
+        <button
+          type="button"
+          onClick={onRefresh}
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "0.4rem",
+            padding: "0.32rem 0.65rem",
+            background: "transparent",
+            border: "1px solid rgba(255, 255, 255, 0.25)",
+            borderRadius: "4px",
+            color: "#FFFFFF",
+            fontFamily: "var(--mono)",
+            fontSize: "11.5px",
+            fontWeight: 500,
+            cursor: "pointer",
+            transition: "all 0.2s ease",
+            textShadow: "0 1px 4px rgba(0,0,0,0.8)",
+          }}
+        >
+          <RotateCw size={12} aria-hidden="true" />
+          <span>{t("header.refresh")}</span>
+        </button>
+
+        {/* Premium Language Selector (Top Right Box) */}
+        <LanguageSelector />
+      </div>
+    </header>
   );
 }
