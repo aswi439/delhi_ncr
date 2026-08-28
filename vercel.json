@@ -9,11 +9,19 @@
       }
     },
     {
+      "src": "api/tts.js",
+      "use": "@vercel/node"
+    },
+    {
       "src": "api/index.py",
       "use": "@vercel/python"
     }
   ],
   "routes": [
+    {
+      "src": "/api/tts",
+      "dest": "api/tts.js"
+    },
     {
       "src": "/api/(.*)",
       "dest": "api/index.py"
