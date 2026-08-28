@@ -24,6 +24,8 @@ import {
 } from "@/lib/mapgeo";
 import type { IndustryRecord, PlumeVectorsResponse, StationReading } from "@/lib/types";
 import { classifyIndustryTier } from "@/lib/types";
+import { useTranslation } from "@/i18n";
+import { getTranslatedStationName, type StationLang } from "@/lib/stationTranslations";
 
 /**
  * Online renderer — a real interactive Leaflet map on keyless raster tiles.
@@ -405,6 +407,7 @@ export default function MapLeaflet({
   onSelect,
   onTileError,
 }: MapLeafletProps) {
+  const { language } = useTranslation();
   const points = useMemo(() => heatPoints(stations), [stations]);
   const selected = useMemo(
     () => stations.find((s) => s.uid === selectedUid) ?? null,
@@ -522,7 +525,7 @@ export default function MapLeaflet({
                   eventHandlers={{ click: () => onSelect(s.uid) }}
                 >
                   <Tooltip direction="top" offset={[0, -6]}>
-                    {s.name} · AQI {Math.round(s.aqi)}
+                    {getTranslatedStationName(s.name, (language as StationLang) || "en")} · AQI {Math.round(s.aqi)}
                   </Tooltip>
                 </CircleMarker>
               </Fragment>

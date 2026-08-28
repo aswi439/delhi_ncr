@@ -101,8 +101,9 @@ export function AlertsPage({
       consensus,
       industries,
       userSettings: settings,
+      language: (language as "en" | "hi" | "ta"),
     });
-  }, [cityAggregate, stationList, forecastData, hour, plumeData, consensus, industries, settings]);
+  }, [cityAggregate, stationList, forecastData, hour, plumeData, consensus, industries, settings, language]);
 
   const filteredActiveAlerts = useMemo(() => {
     if (severityFilter === "ALL") return activeAlerts;
@@ -639,7 +640,7 @@ export function AlertsPage({
                           fontFamily: "var(--mono)",
                         }}
                       >
-                        <span style={{ color: "#94a3b8", marginRight: "4px" }}>DANGER:</span>
+                        <span style={{ color: "#94a3b8", marginRight: "4px" }}>{t.dangerLabel}:</span>
                         <div style={{ display: "flex", gap: "2px" }}>
                           {[1, 2, 3, 4, 5].map((barIdx) => (
                             <span
@@ -732,7 +733,7 @@ export function AlertsPage({
                       color: "#f8fafc",
                     }}
                   >
-                    <strong style={{ color: config.dangerColor }}>RECOMMENDED PROTOCOL: </strong>
+                    <strong style={{ color: config.dangerColor }}>{t.protocolLabel} </strong>
                     {alert.recommendedAction}
                   </div>
 

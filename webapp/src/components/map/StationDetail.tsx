@@ -10,6 +10,8 @@ import type {
   StationReading,
 } from "@/lib/types";
 import { Lanyard, type LanyardCardData } from "@/components/ui/Lanyard";
+import { useTranslation } from "@/i18n";
+import { getTranslatedStationName, type StationLang } from "@/lib/stationTranslations";
 
 interface StationDetailProps {
   /** The clicked station, or null for the default network view. */
@@ -46,6 +48,7 @@ export function StationDetail({
   cityAggregate,
   onClear,
 }: StationDetailProps) {
+  const { language } = useTranslation();
   const cardData: LanyardCardData = useMemo(() => {
     if (station) {
       const pollutants = (Object.entries(station.pollutants) as Array<[string, number | undefined]>)
@@ -57,7 +60,7 @@ export function StationDetail({
       const aqiNum = Math.round(station.aqi);
 
       return {
-        title: station.name,
+        title: getTranslatedStationName(station.name, (language as StationLang) || "en"),
         subtitle: `OpenAQ · ${station.source || "CAAQMS"}`,
         aqi: aqiNum,
         category: station.category,
@@ -112,7 +115,7 @@ export function StationDetail({
       ],
       isStation: false,
     };
-  }, [station, overview, plume, forecast, cursor, stationCount, cityAggregate]);
+  }, [station, overview, plume, forecast, cursor, stationCount, cityAggregate, language]);
 
   return <Lanyard data={cardData} onClear={onClear} />;
 }

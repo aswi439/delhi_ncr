@@ -5,6 +5,7 @@ import type { CityOverview, StationReading } from "@/lib/types";
 import { PanelMessage } from "@/components/ui/panel-message";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useTranslation } from "@/i18n";
+import { getTranslatedStationName, type StationLang } from "@/lib/stationTranslations";
 
 interface StationsProps {
   stations: Panel<StationReading[]>;
@@ -12,7 +13,7 @@ interface StationsProps {
 }
 
 export function Stations({ stations, overview }: StationsProps) {
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
   const rows = (stations.data ?? []).slice().sort((a, b) => b.aqi - a.aqi); // worst first
   const ov = overview.data;
 
@@ -30,8 +31,9 @@ export function Stations({ stations, overview }: StationsProps) {
     }
   };
 
+  const cityName = language === "ta" ? "தில்லி" : language === "hi" ? "दिल्ली" : "Delhi";
   const cityLine = ov
-    ? `Delhi ${int(ov.aqi)} · ${getCategoryLabel(ov.category)}${ov.updated ? ` · ${t("stations.updated")} ${clock(ov.updated)}` : ""}`
+    ? `${cityName} ${int(ov.aqi)} · ${getCategoryLabel(ov.category)}${ov.updated ? ` · ${t("stations.updated")} ${clock(ov.updated)}` : ""}`
     : "";
 
   return (
@@ -77,7 +79,7 @@ export function Stations({ stations, overview }: StationsProps) {
                 {int(s.aqi)}
               </span>
               <span className="st__body">
-                <span className="st__name">{s.name}</span>
+                <span className="st__name">{getTranslatedStationName(s.name, (language as StationLang) || "en")}</span>
                 <span className="st__cat">{getCategoryLabel(s.category)}</span>
               </span>
             </div>

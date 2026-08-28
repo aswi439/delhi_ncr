@@ -45,6 +45,8 @@ export interface AlertTranslationStrings {
   justNow: string;
   saveSettings: string;
   close: string;
+  dangerLabel: string;
+  protocolLabel: string;
 }
 
 export const ALERT_TRANSLATIONS: Record<AlertLanguage, AlertTranslationStrings> = {
@@ -88,6 +90,8 @@ export const ALERT_TRANSLATIONS: Record<AlertLanguage, AlertTranslationStrings> 
     justNow: "Just now",
     saveSettings: "Save Preferences",
     close: "Close",
+    dangerLabel: "DANGER",
+    protocolLabel: "RECOMMENDED PROTOCOL:",
   },
   hi: {
     alertsTitle: "पर्यावरण अलर्ट और चेतावनियाँ",
@@ -129,6 +133,8 @@ export const ALERT_TRANSLATIONS: Record<AlertLanguage, AlertTranslationStrings> 
     justNow: "अभी-अभी",
     saveSettings: "प्राथमिकताएं सहेजें",
     close: "बंद करें",
+    dangerLabel: "खतरा",
+    protocolLabel: "अनुशंसित प्रोटोकॉल:",
   },
   ta: {
     alertsTitle: "சுற்றுச்சூழல் எச்சரிக்கைகள்",
@@ -170,5 +176,7 @@ export const ALERT_TRANSLATIONS: Record<AlertLanguage, AlertTranslationStrings> 
     justNow: "சற்றுமுன்",
     saveSettings: "அமைப்புகளைச் சேமிக்கவும்",
     close: "மூடு",
+    dangerLabel: "ஆபத்து",
+    protocolLabel: "பரிந்துரைக்கப்பட்ட நெறிமுறை:",
   },
 };

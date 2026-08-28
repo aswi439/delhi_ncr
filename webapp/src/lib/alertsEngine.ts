@@ -16,6 +16,7 @@ import type {
   StationReading,
 } from "./types";
 import { classifyIndustryTier } from "./types";
+import { ALERT_BODY, type AlertLang } from "./alertContentTranslations";
 
 export type AlertSeverity = "CRITICAL" | "HIGH" | "MODERATE" | "LOW" | "INFO";
 
@@ -174,6 +175,7 @@ export interface AlertEngineInput {
   consensus?: ConsensusResponse | null;
   industries?: IndustryRecord[];
   userSettings?: AlertSettings;
+  language?: AlertLang;
 }
 
 export function evaluateAlerts({
@@ -185,6 +187,7 @@ export function evaluateAlerts({
   consensus,
   industries = [],
   userSettings = DEFAULT_ALERT_SETTINGS,
+  language = "en",
 }: AlertEngineInput): {
   activeAlerts: AlertItem[];
   earlierAlerts: AlertItem[];
@@ -195,6 +198,7 @@ export function evaluateAlerts({
   const alerts: AlertItem[] = [];
   const now = new Date();
   const nowIso = now.toISOString();
+  const L = ALERT_BODY[language] || ALERT_BODY.en;
 
   // Current Regional AQI & PM2.5 Telemetry
   const currentAqi =
@@ -220,10 +224,10 @@ export function evaluateAlerts({
         id: "alert-regional-severe-aqi",
         category: "AIR_QUALITY",
         severity: "CRITICAL",
-        title: "Severe Air Quality Emergency Advisory",
-        summary: `Regional AQI has reached ${Math.round(currentAqi)} (Severe). Air pollution is dangerous across Delhi-NCR.`,
-        description: `Atmospheric monitoring stations indicate severe pollutant concentration across the National Capital Region. Microscopic particulate matter (PM2.5 at ${Math.round(currentPm25)} µg/m³) is currently 8× above CPCB national safety thresholds.`,
-        location: "Delhi-NCR Regional Network (All 11 Districts)",
+        title: L.severeTitle,
+        summary: L.severeSummary(Math.round(currentAqi)),
+        description: L.severeDesc(Math.round(currentPm25)),
+        location: L.severeLocation,
         coordinates: { lat: 28.6139, lon: 77.2090 },
         firstDetected: new Date(now.getTime() - 45 * 60000).toISOString(),
         lastUpdated: nowIso,
@@ -239,14 +243,12 @@ export function evaluateAlerts({
           inversionPresent,
         },
         impactLevel: "Severe",
-        recommendedAction:
-          "Avoid all outdoor physical activity. Keep windows and doors tightly sealed. Run indoor HEPA air filtration if available.",
-        sensitiveGroupAction:
-          "Children, senior citizens, and people with respiratory or cardiac ailments should strictly remain indoors and have prescribed medication accessible.",
+        recommendedAction: L.severeAction,
+        sensitiveGroupAction: L.severeSensitive,
         sourceContext: {
           type: "observed",
-          label: "CPCB Multi-Station Grid",
-          details: "Confirmed by 43 continuous ambient air quality monitoring stations.",
+          label: L.severeSourceLabel,
+          details: L.severeSourceDetail,
         },
         actionTarget: { type: "map", lat: 28.6139, lon: 77.2090 },
       });
@@ -255,10 +257,10 @@ export function evaluateAlerts({
         id: "alert-regional-very-poor-aqi",
         category: "AIR_QUALITY",
         severity: "HIGH",
-        title: "Very Poor Air Quality Alert",
-        summary: `Air quality has reached a very poor level across Delhi-NCR (AQI ${Math.round(currentAqi)}).`,
-        description: `Sustained high particulate density detected across the urban airshed. PM2.5 levels are currently averaging ${Math.round(currentPm25)} µg/m³, which causes prolonged respiratory discomfort upon active outdoor exposure.`,
-        location: "Delhi-NCR Urban Metropolitan Area",
+        title: L.veryPoorTitle,
+        summary: L.veryPoorSummary(Math.round(currentAqi)),
+        description: L.veryPoorDesc(Math.round(currentPm25)),
+        location: L.veryPoorLocation,
         coordinates: { lat: 28.6139, lon: 77.2090 },
         firstDetected: new Date(now.getTime() - 90 * 60000).toISOString(),
         lastUpdated: nowIso,
@@ -274,14 +276,12 @@ export function evaluateAlerts({
           inversionPresent,
         },
         impactLevel: "Very High",
-        recommendedAction:
-          "Minimize prolonged outdoor exertion, especially during morning and evening rush hours. Wear an N95 mask if commuting.",
-        sensitiveGroupAction:
-          "Persons with asthma or cardiovascular conditions should limit outdoor exposure and monitor peak airflow symptoms.",
+        recommendedAction: L.veryPoorAction,
+        sensitiveGroupAction: L.veryPoorSensitive,
         sourceContext: {
           type: "observed",
-          label: "CPCB / DPCC Real-Time Telemetry",
-          details: "Verified against multi-provider ambient monitoring network.",
+          label: L.veryPoorSourceLabel,
+          details: L.veryPoorSourceDetail,
         },
         actionTarget: { type: "map", lat: 28.6139, lon: 77.2090 },
       });
@@ -290,10 +290,10 @@ export function evaluateAlerts({
         id: "alert-regional-poor-aqi",
         category: "AIR_QUALITY",
         severity: "MODERATE",
-        title: "Poor Air Quality Advisory",
-        summary: `Air quality is in the Poor category (AQI ${Math.round(currentAqi)}) in Delhi-NCR.`,
-        description: `Moderate-to-poor dispersion conditions are causing a buildup of fine particulates (PM2.5: ${Math.round(currentPm25)} µg/m³). Outdoor air is unfavorable for sensitive groups.`,
-        location: "Delhi-NCR Metropolitan Area",
+        title: L.poorTitle,
+        summary: L.poorSummary(Math.round(currentAqi)),
+        description: L.poorDesc(Math.round(currentPm25)),
+        location: L.poorLocation,
         coordinates: { lat: 28.6139, lon: 77.2090 },
         firstDetected: new Date(now.getTime() - 120 * 60000).toISOString(),
         lastUpdated: nowIso,
@@ -308,14 +308,12 @@ export function evaluateAlerts({
           windDirection: windDir,
         },
         impactLevel: "Moderate",
-        recommendedAction:
-          "Reduce strenuous outdoor activities. Consider wearing a protective mask during congested road commutes.",
-        sensitiveGroupAction:
-          "Sensitive individuals should take regular breaks and avoid high-traffic roads.",
+        recommendedAction: L.poorAction,
+        sensitiveGroupAction: L.poorSensitive,
         sourceContext: {
           type: "observed",
-          label: "CAAQMS Live Telemetry",
-          details: "Aggregated across ambient monitoring network.",
+          label: L.poorSourceLabel,
+          details: L.poorSourceDetail,
         },
         actionTarget: { type: "map", lat: 28.6139, lon: 77.2090 },
       });
@@ -333,9 +331,9 @@ export function evaluateAlerts({
         id: stationId,
         category: "AIR_QUALITY",
         severity: highestStation.aqi >= 400 ? "CRITICAL" : "HIGH",
-        title: `Localized Hotspot Spike: ${highestStation.name}`,
-        summary: `Air pollution has surged to critical levels at ${highestStation.name} (AQI ${highestStation.aqi}).`,
-        description: `Continuous ambient monitoring at ${highestStation.name} registered elevated particulate concentration. Local atmospheric conditions and dense traffic/industrial corridors in the vicinity are limiting vertical dispersion.`,
+        title: L.hotspotTitle(highestStation.name),
+        summary: L.hotspotSummary(highestStation.name, highestStation.aqi),
+        description: L.hotspotDesc(highestStation.name),
         location: `${highestStation.name}, Delhi-NCR`,
         coordinates: { lat: highestStation.lat, lon: highestStation.lon },
         firstDetected: new Date(now.getTime() - 25 * 60000).toISOString(),
@@ -348,14 +346,12 @@ export function evaluateAlerts({
           dominantPollutant: String(highestStation.dominant_pollutant || "PM2.5"),
         },
         impactLevel: highestStation.aqi >= 400 ? "Severe" : "Very High",
-        recommendedAction:
-          "Residents in and around this micro-zone should avoid morning and evening jogs and keep ventilation closed.",
-        sensitiveGroupAction:
-          "High risk of acute breathing irritation. Avoid outdoor exposure in this sector.",
+        recommendedAction: L.hotspotAction,
+        sensitiveGroupAction: L.hotspotSensitive,
         sourceContext: {
           type: "observed",
-          label: "Local CAAQMS Sensor",
-          details: `Direct sensor feed from Station UID: ${highestStation.uid}.`,
+          label: L.hotspotSourceLabel,
+          details: L.hotspotSourceDetail(highestStation.uid),
         },
         actionTarget: {
           type: "map",
@@ -395,10 +391,10 @@ export function evaluateAlerts({
         id: rapidId,
         category: "RAPID_RISE",
         severity: deltaPct >= 40 ? "HIGH" : "MODERATE",
-        title: "Rapid Pollution Surge Detected",
-        summary: `PM2.5 increased significantly in the last hour (${prevVal} → ${currVal} µg/m³, +${deltaPct}%).`,
-        description: `A rapid influx of fine particulate matter was recorded within a short time window. Rapid rises typically indicate boundary-layer compression or localized heavy traffic congestion.`,
-        location: "Delhi-NCR Central Airshed",
+        title: L.rapidTitle,
+        summary: L.rapidSummary(prevVal, currVal, deltaPct),
+        description: L.rapidDesc,
+        location: L.rapidLocation,
         coordinates: { lat: 28.6139, lon: 77.2090 },
         firstDetected: new Date(now.getTime() - 35 * 60000).toISOString(),
         lastUpdated: nowIso,
@@ -411,14 +407,12 @@ export function evaluateAlerts({
           timeframe: "Last 60 minutes",
         },
         impactLevel: "High",
-        recommendedAction:
-          "Expect sudden deterioration in outdoor air clarity. Postpone non-essential outdoor errands until particulate levels stabilize.",
-        sensitiveGroupAction:
-          "Vulnerable individuals should avoid outdoor exposure while particulate surge is underway.",
+        recommendedAction: L.rapidAction,
+        sensitiveGroupAction: L.rapidSensitive,
         sourceContext: {
           type: "observed",
-          label: "Derivative Rate-of-Change Tracker",
-          details: `PM2.5 rate of increase exceeded +${deltaPct}% per hour threshold.`,
+          label: L.rapidSourceLabel,
+          details: L.rapidSourceDetail(deltaPct),
         },
         actionTarget: { type: "forecast" },
       });
@@ -439,9 +433,9 @@ export function evaluateAlerts({
         id: indId,
         category: "INDUSTRIAL",
         severity: "MODERATE",
-        title: "Potential Industrial Zone Emission Influence",
-        summary: `Potential industrial emission influence detected near ${topCluster.name} cluster.`,
-        description: `Spatial proximity and local wind trajectory (${windDir} at ${windSpd} m/s) indicate potential downwind particulate influence from nearby manufacturing and processing facilities in this industrial belt.`,
+        title: L.industrialTitle,
+        summary: L.industrialSummary(topCluster.name),
+        description: L.industrialDesc(windDir, windSpd),
         location: `${topCluster.name}, ${topCluster.city}`,
         coordinates: { lat: topCluster.latitude, lon: topCluster.longitude },
         firstDetected: new Date(now.getTime() - 110 * 60000).toISOString(),
@@ -454,14 +448,12 @@ export function evaluateAlerts({
           windDirection: windDir,
         },
         impactLevel: "Moderate",
-        recommendedAction:
-          "Residents living downwind of industrial pockets should keep windows facing industrial corridors closed during night and early morning hours.",
-        sensitiveGroupAction:
-          "Be aware of chemical or sulfurous odors. Use carbon/HEPA indoor filters if residing close to the cluster.",
+        recommendedAction: L.industrialAction,
+        sensitiveGroupAction: L.industrialSensitive,
         sourceContext: {
           type: "spatial_source",
-          label: "Delhi Industrial Cluster Registry (CPCB Tier 1)",
-          details: `Sector: ${topCluster.sector || topCluster.category || "Manufacturing"}. Spatial correlation assessed downwind.`,
+          label: L.industrialSourceLabel,
+          details: L.industrialSourceDetail(topCluster.sector || topCluster.category || "Manufacturing"),
         },
         actionTarget: {
           type: "map",
@@ -488,10 +480,10 @@ export function evaluateAlerts({
         id: fireId,
         category: "FIRE_SMOKE",
         severity: count >= 8 ? "HIGH" : "MODERATE",
-        title: "Upstream Fire & Biomass Smoke Activity Detected",
-        summary: `Satellite detection identified ${count} active thermal hotspot(s) in upstream agricultural belts.`,
-        description: `NASA FIRMS VIIRS satellite sensors detected active biomass burn signatures (Peak FRP: ${Math.round(topFire.frp_mw)} MW in ${topFire.source_state}). Regional 850 hPa wind trajectories indicate potential atmospheric smoke influx toward Delhi-NCR.`,
-        location: `${topFire.source_state} Agricultural Corridor (${count} Active Detections)`,
+        title: L.fireTitle,
+        summary: L.fireSummary(count),
+        description: L.fireDesc(Math.round(topFire.frp_mw), topFire.source_state),
+        location: `${topFire.source_state} (${count})`,
         coordinates: { lat: topFire.lat, lon: topFire.lon },
         firstDetected: new Date(now.getTime() - 80 * 60000).toISOString(),
         lastUpdated: nowIso,
@@ -503,14 +495,12 @@ export function evaluateAlerts({
           windDirection: windDir,
         },
         impactLevel: count >= 8 ? "High" : "Moderate",
-        recommendedAction:
-          "Expect hazy skies and reduced visibility during late evening and dawn. Limit outdoor activities during early morning.",
-        sensitiveGroupAction:
-          "Smoke particles contain fine organic carbon. Use tight-fitting N95 masks if outdoors.",
+        recommendedAction: L.fireAction,
+        sensitiveGroupAction: L.fireSensitive,
         sourceContext: {
           type: "spatial_source",
-          label: "NASA FIRMS Satellite Telemetry",
-          details: `Confirmed by VIIRS/MODIS thermal anomaly sensors with 850 hPa trajectory coupling.`,
+          label: L.fireSourceLabel,
+          details: L.fireSourceDetail,
         },
         actionTarget: {
           type: "map",
@@ -537,10 +527,10 @@ export function evaluateAlerts({
           id: forecastId,
           category: "FORECAST",
           severity: maxPredicted >= 380 ? "HIGH" : "MODERATE",
-          title: "Air Quality Expected to Deteriorate",
-          summary: `Prognostic models predict AQI rising from ${Math.round(currentAqi)} to ${Math.round(maxPredicted)} over the next few hours.`,
-          description: `Coupled prognostic atmospheric models forecast a drop in the Planetary Boundary Layer (PBL) mixing height and nocturnal thermal inversion, trapping surface emissions and causing an evening AQI spike.`,
-          location: "Delhi-NCR Airshed (Next 3–6 Hours)",
+          title: L.forecastTitle,
+          summary: L.forecastSummary(Math.round(currentAqi), Math.round(maxPredicted)),
+          description: L.forecastDesc,
+          location: L.forecastLocation,
           coordinates: { lat: 28.6139, lon: 77.2090 },
           firstDetected: new Date(now.getTime() - 60 * 60000).toISOString(),
           lastUpdated: nowIso,
@@ -553,14 +543,17 @@ export function evaluateAlerts({
             inversionPresent: true,
           },
           impactLevel: maxPredicted >= 380 ? "Very High" : "High",
-          recommendedAction:
-            "Plan your outdoor commutes and workouts earlier or later when dispersion conditions are more favorable.",
-          sensitiveGroupAction:
-            "Ensure indoor air purifiers are activated ahead of the projected evening pollution surge.",
+          recommendedAction: L.forecastAction,
+          sensitiveGroupAction: L.forecastSensitive,
           sourceContext: {
             type: "predicted",
-            label: "NCR-72 Picard Feedback Model",
-            details: `Aerosol-meteorology radiative forcing simulation predicts peak AQI of ${Math.round(maxPredicted)} at ${worstHour ? new Date(worstHour.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "tonight"}.`,
+            label: L.forecastSourceLabel,
+            details: L.forecastSourceDetail(
+              Math.round(maxPredicted),
+              worstHour
+                ? new Date(worstHour.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+                : "tonight"
+            ),
           },
           actionTarget: { type: "forecast" },
         });
@@ -577,10 +570,10 @@ export function evaluateAlerts({
       id: exposureId,
       category: "EXPOSURE",
       severity: "MODERATE",
-      title: "Elevated Personal Exposure Risk",
-      summary: "Current ambient particulate density poses rapid cumulative inhalation risk.",
-      description: `At current PM2.5 levels (${Math.round(currentPm25)} µg/m³), spending 60 minutes outdoors during active exertion results in an estimated equivalent inhalation of multiple cigarette micro-particulates.`,
-      location: "Active Ambient Zone",
+      title: L.exposureTitle,
+      summary: L.exposureSummary,
+      description: L.exposureDesc(Math.round(currentPm25)),
+      location: L.exposureLocation,
       firstDetected: new Date(now.getTime() - 50 * 60000).toISOString(),
       lastUpdated: nowIso,
       isRead: readIds.has(exposureId),
@@ -590,14 +583,12 @@ export function evaluateAlerts({
         aqi: Math.round(currentAqi),
       },
       impactLevel: "High",
-      recommendedAction:
-        "Check your personal daily exposure budget in the Exposure Tracker to optimize transit routes and indoor timing.",
-      sensitiveGroupAction:
-        "Avoid any strenuous cardio workouts outdoors.",
+      recommendedAction: L.exposureAction,
+      sensitiveGroupAction: L.exposureSensitive,
       sourceContext: {
         type: "observed",
-        label: "Personal Dosimetry & Respiratory Model",
-        details: "Computed against WHO 24-hour PM2.5 baseline guidelines.",
+        label: L.exposureSourceLabel,
+        details: L.exposureSourceDetail,
       },
       actionTarget: { type: "exposure" },
     });
@@ -611,22 +602,22 @@ export function evaluateAlerts({
       id: "hist-alert-1",
       category: "RAPID_RISE",
       severity: "HIGH",
-      title: "Evening Particulate Surge Resolved",
-      summary: "PM2.5 peaked at 168 µg/m³ during peak evening transit rush, now stabilized.",
-      description: "Evening rush hour traffic coupled with declining boundary layer depth caused a temporary surge, which has now settled to baseline levels.",
-      location: "Anand Vihar & East Delhi Corridor",
+      title: L.histTitle1,
+      summary: L.histSummary1,
+      description: L.histDesc1,
+      location: L.histLocation1,
       firstDetected: new Date(now.getTime() - 5 * 3600000).toISOString(),
       lastUpdated: new Date(now.getTime() - 3 * 3600000).toISOString(),
       isRead: true,
       status: "resolved",
       metrics: { pm25: 168, aqi: 312 },
       impactLevel: "Moderate",
-      recommendedAction: "Conditions normalized back to daily average.",
-      sensitiveGroupAction: "Normal precautionary measures apply.",
+      recommendedAction: L.histAction1,
+      sensitiveGroupAction: L.histSensitive1,
       sourceContext: {
         type: "observed",
-        label: "CAAQMS Archived Telemetry",
-        details: "Event resolved and verified by monitoring network.",
+        label: L.histSourceLabel1,
+        details: L.histSourceDetail1,
       },
       actionTarget: { type: "map" },
     },
@@ -634,22 +625,22 @@ export function evaluateAlerts({
       id: "hist-alert-2",
       category: "AIR_QUALITY",
       severity: "MODERATE",
-      title: "Nocturnal Inversion Dissipated",
-      summary: "Morning solar heating successfully restored vertical mixing layer depth.",
-      description: "Surface temperature inversion layer broke as ground temperature rose past 21°C, allowing trapped ground pollutants to disperse vertically.",
-      location: "Central & South Delhi",
+      title: L.histTitle2,
+      summary: L.histSummary2,
+      description: L.histDesc2,
+      location: L.histLocation2,
       firstDetected: new Date(now.getTime() - 10 * 3600000).toISOString(),
       lastUpdated: new Date(now.getTime() - 7 * 3600000).toISOString(),
       isRead: true,
       status: "resolved",
       metrics: { aqi: 245, pm25: 98 },
       impactLevel: "Low",
-      recommendedAction: "Vertical mixing restored.",
-      sensitiveGroupAction: "Standard precautions.",
+      recommendedAction: L.histAction2,
+      sensitiveGroupAction: L.histSensitive2,
       sourceContext: {
         type: "observed",
-        label: "Atmospheric Sounding Profile",
-        details: "Lapse rate returned to positive gradient.",
+        label: L.histSourceLabel2,
+        details: L.histSourceDetail2,
       },
       actionTarget: { type: "forecast" },
     },
