@@ -71,8 +71,8 @@ export function Rail({
         zIndex: 40,
       }}
     >
-      {/* Left: Brand Logo & Download Report Trigger */}
-      <div style={{ display: "flex", alignItems: "center", gap: "1rem", zIndex: 10 }}>
+      {/* Left: Brand Logo & Download Report Trigger (Stacked in top-left) */}
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: "0.35rem", zIndex: 10 }}>
         <div
           className="rail__brand"
           style={{ cursor: "pointer", display: "flex", alignItems: "baseline", gap: "0.5rem" }}
@@ -99,7 +99,7 @@ export function Rail({
           </span>
         </div>
 
-        {/* Compact Premium Download Report Action */}
+        {/* Compact Premium Download Report Action placed directly under brand text */}
         {onPageChange && (
           <button
             type="button"
@@ -108,13 +108,13 @@ export function Rail({
               display: "inline-flex",
               alignItems: "center",
               gap: "0.4rem",
-              padding: "0.32rem 0.75rem",
+              padding: "0.26rem 0.65rem",
               background: currentPage === "report" ? "rgba(56, 189, 248, 0.25)" : "rgba(255, 255, 255, 0.08)",
-              border: `1px solid ${currentPage === "report" ? "rgba(56, 189, 248, 0.5)" : "rgba(255, 255, 255, 0.2)"}`,
+              border: `1px solid ${currentPage === "report" ? "rgba(56, 189, 248, 0.5)" : "rgba(255, 255, 255, 0.18)"}`,
               borderRadius: "5px",
               color: currentPage === "report" ? "var(--cyan)" : "#FFFFFF",
               fontFamily: "var(--mono)",
-              fontSize: "11px",
+              fontSize: "10.5px",
               fontWeight: 600,
               cursor: "pointer",
               transition: "all 0.2s cubic-bezier(0.16, 1, 0.3, 1)",
@@ -123,7 +123,7 @@ export function Rail({
             }}
             title="Download Official Delhi-NCR AQI Intelligence Report"
           >
-            <Download size={12} style={{ color: "var(--cyan)" }} />
+            <Download size={11} style={{ color: "var(--cyan)" }} />
             <span>{t("navigation.downloadReport") || "Download Report"}</span>
           </button>
         )}
