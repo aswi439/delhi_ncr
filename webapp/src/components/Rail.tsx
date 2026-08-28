@@ -1,15 +1,18 @@
+import { useState, useEffect } from "react";
 import {
   RotateCw,
   History,
   CloudRain,
   HeartPulse,
   BarChart3,
-  Layers,
   Bot,
   Bell,
   Download,
   Truck,
+  Building2,
+  Users,
 } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 
 import type { Feeds } from "@/hooks/useForecastData";
 import { useTranslation } from "@/i18n";
@@ -48,11 +51,70 @@ export function Rail({
 }: RailProps) {
   const { t } = useTranslation();
 
+  const isAuthorityPage =
+    currentPage === "forecast-datas" ||
+    currentPage === "historic-data" ||
+    currentPage === "atmospheric-dynamics" ||
+    currentPage === "transports";
+
+  const isCitizenPage =
+    currentPage === "exposure-tracker" ||
+    currentPage === "health-assistant";
+
+  // Active category: "authority" | "citizen" | null
+  const [activeCategory, setActiveCategory] = useState<"authority" | "citizen" | null>(() => {
+    if (isAuthorityPage) return "authority";
+    if (isCitizenPage) return "citizen";
+    return null;
+  });
+
+  useEffect(() => {
+    if (isAuthorityPage) {
+      setActiveCategory("authority");
+    } else if (isCitizenPage) {
+      setActiveCategory("citizen");
+    } else if (currentPage === "overview") {
+      setActiveCategory(null);
+    }
+  }, [currentPage, isAuthorityPage, isCitizenPage]);
+
   const handleSelectPage = (page: PageType) => {
     if (onPageChange) {
       onPageChange(page);
     }
   };
+
+  const handleCategoryClick = (category: "authority" | "citizen") => {
+    if (activeCategory === category && currentPage === "overview") {
+      // Toggle off if on overview
+      setActiveCategory(null);
+      return;
+    }
+
+    setActiveCategory(category);
+
+    if (category === "authority") {
+      if (!isAuthorityPage && onPageChange) {
+        onPageChange("forecast-datas");
+      }
+    } else if (category === "citizen") {
+      if (!isCitizenPage && onPageChange) {
+        onPageChange("exposure-tracker");
+      }
+    }
+  };
+
+  const authorityItems = [
+    { id: "forecast-datas", label: t("navigation.forecast"), icon: BarChart3 },
+    { id: "historic-data", label: t("navigation.historic"), icon: History },
+    { id: "atmospheric-dynamics", label: t("navigation.atmosphere"), icon: CloudRain },
+    { id: "transports", label: t("navigation.transports") || "Transports", icon: Truck },
+  ];
+
+  const citizenItems = [
+    { id: "exposure-tracker", label: t("navigation.exposure"), icon: HeartPulse },
+    { id: "health-assistant", label: t("navigation.healthAdvisory") || t("navigation.healthAssistant") || "Health Advisory", icon: Bot },
+  ];
 
   return (
     <header
@@ -131,7 +193,7 @@ export function Rail({
         )}
       </div>
 
-      {/* Center: Dedicated Top Navigation Pill Bar */}
+      {/* Center: Major 2-Option Menu Bar (Authority & Citizen) with Dynamic Submenu */}
       {onPageChange && (
         <div
           style={{
@@ -141,9 +203,12 @@ export function Rail({
             transform: "translate(-50%, -50%)",
             zIndex: 50,
             pointerEvents: "auto",
-            maxWidth: "calc(100vw - 320px)",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
           }}
         >
+          {/* Primary Top Bar: Exactly 2 Options (Authority & Citizen) */}
           <div
             className="liquid-glass"
             style={{
@@ -152,7 +217,7 @@ export function Rail({
               gap: "0.25rem",
               padding: "0.28rem 0.35rem",
               borderRadius: "9999px",
-              background: "rgba(12, 16, 26, 0.65)",
+              background: "rgba(12, 16, 26, 0.7)",
               backdropFilter: "blur(24px) saturate(180%)",
               WebkitBackdropFilter: "blur(24px) saturate(180%)",
               border: "1px solid rgba(255, 255, 255, 0.2)",
@@ -161,67 +226,181 @@ export function Rail({
               maxWidth: "100%",
             }}
           >
-            {[
-              { id: "overview", label: t("navigation.overview"), icon: Layers },
-              { id: "forecast-datas", label: t("navigation.forecast"), icon: BarChart3 },
-              { id: "historic-data", label: t("navigation.historic"), icon: History },
-              { id: "atmospheric-dynamics", label: t("navigation.atmosphere"), icon: CloudRain },
-              { id: "exposure-tracker", label: t("navigation.exposure"), icon: HeartPulse },
-              { id: "transports", label: t("navigation.transports") || "Transports", icon: Truck },
-              { id: "health-assistant", label: t("navigation.healthAssistant"), icon: Bot },
-            ].map((btn) => {
-              const isActive = currentPage === btn.id;
-              const Icon = btn.icon;
-              return (
-                <button
-                  key={btn.id}
-                  type="button"
-                  onClick={() => onPageChange(btn.id as PageType)}
-                  style={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: "0.35rem",
-                    padding: "0.32rem 0.75rem",
-                    borderRadius: "9999px",
-                    background: isActive ? "rgba(255, 255, 255, 0.2)" : "transparent",
-                    border: `1px solid ${isActive ? "rgba(255, 255, 255, 0.38)" : "transparent"}`,
-                    boxShadow: isActive
-                      ? "0 2px 8px rgba(0, 0, 0, 0.3), inset 0 1px 1px rgba(255, 255, 255, 0.35)"
-                      : "none",
-                    color: isActive ? "#FFFFFF" : "rgba(255, 255, 255, 0.75)",
-                    fontFamily: "var(--mono)",
-                    fontSize: "11.5px",
-                    fontWeight: isActive ? 600 : 400,
-                    cursor: "pointer",
-                    transition: "all 0.2s cubic-bezier(0.16, 1, 0.3, 1)",
-                    whiteSpace: "nowrap",
-                    outline: "none",
-                  }}
-                  onMouseEnter={(e) => {
-                    if (!isActive) {
-                      e.currentTarget.style.color = "#FFFFFF";
-                      e.currentTarget.style.background = "rgba(255, 255, 255, 0.08)";
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    if (!isActive) {
-                      e.currentTarget.style.color = "rgba(255, 255, 255, 0.75)";
-                      e.currentTarget.style.background = "transparent";
-                    }
-                  }}
-                >
-                  <Icon
-                    size={12.5}
-                    style={{
-                      color: isActive ? "var(--live)" : "rgba(255, 255, 255, 0.6)",
-                      transition: "color 0.25s ease",
-                    }}
-                  />
-                  <span>{btn.label}</span>
-                </button>
-              );
-            })}
+            {/* Option 1: Authority */}
+            <button
+              type="button"
+              onClick={() => handleCategoryClick("authority")}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "0.4rem",
+                padding: "0.34rem 0.95rem",
+                borderRadius: "9999px",
+                background: isAuthorityPage || activeCategory === "authority" ? "rgba(255, 255, 255, 0.22)" : "transparent",
+                border: `1px solid ${isAuthorityPage || activeCategory === "authority" ? "rgba(255, 255, 255, 0.42)" : "transparent"}`,
+                boxShadow: isAuthorityPage || activeCategory === "authority"
+                  ? "0 2px 8px rgba(0, 0, 0, 0.35), inset 0 1px 1px rgba(255, 255, 255, 0.35)"
+                  : "none",
+                color: isAuthorityPage || activeCategory === "authority" ? "#FFFFFF" : "rgba(255, 255, 255, 0.75)",
+                fontFamily: "var(--mono)",
+                fontSize: "12px",
+                fontWeight: isAuthorityPage || activeCategory === "authority" ? 600 : 400,
+                cursor: "pointer",
+                transition: "all 0.2s cubic-bezier(0.16, 1, 0.3, 1)",
+                whiteSpace: "nowrap",
+                outline: "none",
+              }}
+              onMouseEnter={(e) => {
+                if (!isAuthorityPage && activeCategory !== "authority") {
+                  e.currentTarget.style.color = "#FFFFFF";
+                  e.currentTarget.style.background = "rgba(255, 255, 255, 0.08)";
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!isAuthorityPage && activeCategory !== "authority") {
+                  e.currentTarget.style.color = "rgba(255, 255, 255, 0.75)";
+                  e.currentTarget.style.background = "transparent";
+                }
+              }}
+            >
+              <Building2
+                size={13}
+                style={{
+                  color: isAuthorityPage || activeCategory === "authority" ? "var(--cyan)" : "rgba(255, 255, 255, 0.6)",
+                  transition: "color 0.25s ease",
+                }}
+              />
+              <span>{t("navigation.authority") || "Authority"}</span>
+            </button>
+
+            {/* Option 2: Citizen */}
+            <button
+              type="button"
+              onClick={() => handleCategoryClick("citizen")}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "0.4rem",
+                padding: "0.34rem 0.95rem",
+                borderRadius: "9999px",
+                background: isCitizenPage || activeCategory === "citizen" ? "rgba(255, 255, 255, 0.22)" : "transparent",
+                border: `1px solid ${isCitizenPage || activeCategory === "citizen" ? "rgba(255, 255, 255, 0.42)" : "transparent"}`,
+                boxShadow: isCitizenPage || activeCategory === "citizen"
+                  ? "0 2px 8px rgba(0, 0, 0, 0.35), inset 0 1px 1px rgba(255, 255, 255, 0.35)"
+                  : "none",
+                color: isCitizenPage || activeCategory === "citizen" ? "#FFFFFF" : "rgba(255, 255, 255, 0.75)",
+                fontFamily: "var(--mono)",
+                fontSize: "12px",
+                fontWeight: isCitizenPage || activeCategory === "citizen" ? 600 : 400,
+                cursor: "pointer",
+                transition: "all 0.2s cubic-bezier(0.16, 1, 0.3, 1)",
+                whiteSpace: "nowrap",
+                outline: "none",
+              }}
+              onMouseEnter={(e) => {
+                if (!isCitizenPage && activeCategory !== "citizen") {
+                  e.currentTarget.style.color = "#FFFFFF";
+                  e.currentTarget.style.background = "rgba(255, 255, 255, 0.08)";
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!isCitizenPage && activeCategory !== "citizen") {
+                  e.currentTarget.style.color = "rgba(255, 255, 255, 0.75)";
+                  e.currentTarget.style.background = "transparent";
+                }
+              }}
+            >
+              <Users
+                size={13}
+                style={{
+                  color: isCitizenPage || activeCategory === "citizen" ? "var(--live)" : "rgba(255, 255, 255, 0.6)",
+                  transition: "color 0.25s ease",
+                }}
+              />
+              <span>{t("navigation.citizen") || "Citizen"}</span>
+            </button>
           </div>
+
+          {/* Submenu Pills: Floating Directly Below with White-Rounded Liquid Glass Animation */}
+          <AnimatePresence>
+            {activeCategory && (
+              <motion.div
+                initial={{ opacity: 0, y: -6, scale: 0.95 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -6, scale: 0.95 }}
+                transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
+                className="liquid-glass"
+                style={{
+                  position: "absolute",
+                  top: "calc(100% + 7px)",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "0.25rem",
+                  padding: "0.26rem 0.32rem",
+                  borderRadius: "9999px",
+                  background: "rgba(10, 14, 24, 0.85)",
+                  backdropFilter: "blur(28px) saturate(190%)",
+                  WebkitBackdropFilter: "blur(28px) saturate(190%)",
+                  border: "1px solid rgba(255, 255, 255, 0.22)",
+                  boxShadow: "0 12px 36px rgba(0, 0, 0, 0.6), inset 0 1px 1.5px rgba(255, 255, 255, 0.3)",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {(activeCategory === "authority" ? authorityItems : citizenItems).map((btn) => {
+                  const isActive = currentPage === btn.id;
+                  const Icon = btn.icon;
+                  return (
+                    <button
+                      key={btn.id}
+                      type="button"
+                      onClick={() => handleSelectPage(btn.id as PageType)}
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "0.35rem",
+                        padding: "0.32rem 0.75rem",
+                        borderRadius: "9999px",
+                        background: isActive ? "rgba(255, 255, 255, 0.22)" : "transparent",
+                        border: `1px solid ${isActive ? "rgba(255, 255, 255, 0.42)" : "transparent"}`,
+                        boxShadow: isActive
+                          ? "0 2px 8px rgba(0, 0, 0, 0.35), inset 0 1px 1px rgba(255, 255, 255, 0.35)"
+                          : "none",
+                        color: isActive ? "#FFFFFF" : "rgba(255, 255, 255, 0.75)",
+                        fontFamily: "var(--mono)",
+                        fontSize: "11.5px",
+                        fontWeight: isActive ? 600 : 400,
+                        cursor: "pointer",
+                        transition: "all 0.2s cubic-bezier(0.16, 1, 0.3, 1)",
+                        whiteSpace: "nowrap",
+                        outline: "none",
+                      }}
+                      onMouseEnter={(e) => {
+                        if (!isActive) {
+                          e.currentTarget.style.color = "#FFFFFF";
+                          e.currentTarget.style.background = "rgba(255, 255, 255, 0.08)";
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (!isActive) {
+                          e.currentTarget.style.color = "rgba(255, 255, 255, 0.75)";
+                          e.currentTarget.style.background = "transparent";
+                        }
+                      }}
+                    >
+                      <Icon
+                        size={12.5}
+                        style={{
+                          color: isActive ? "var(--live)" : "rgba(255, 255, 255, 0.6)",
+                          transition: "color 0.25s ease",
+                        }}
+                      />
+                      <span>{btn.label}</span>
+                    </button>
+                  );
+                })}
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       )}
 
