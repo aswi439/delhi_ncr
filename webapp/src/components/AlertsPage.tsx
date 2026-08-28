@@ -14,6 +14,7 @@ import {
   Clock,
   ShieldCheck,
   ChevronRight,
+  ShieldAlert,
 } from "lucide-react";
 import type { Panel } from "@/hooks/useForecastData";
 import type {
@@ -110,7 +111,6 @@ export function AlertsPage({
 
   const handleMarkAllRead = () => {
     markAllAlertsAsRead(activeAlerts.map((a) => a.id));
-    // Force re-render with new settings clone
     setSettings((prev) => ({ ...prev }));
   };
 
@@ -124,12 +124,76 @@ export function AlertsPage({
     saveAlertSettings(newSettings);
   };
 
-  const severityBadges: Record<AlertSeverity, { border: string; bg: string; text: string }> = {
-    CRITICAL: { border: "#ef4444", bg: "rgba(239, 68, 68, 0.2)", text: "#fca5a5" },
-    HIGH: { border: "#f97316", bg: "rgba(249, 115, 22, 0.2)", text: "#fdba74" },
-    MODERATE: { border: "#eab308", bg: "rgba(234, 179, 8, 0.2)", text: "#fde047" },
-    LOW: { border: "#22c55e", bg: "rgba(34, 197, 94, 0.2)", text: "#86efac" },
-    INFO: { border: "#a855f7", bg: "rgba(168, 85, 247, 0.2)", text: "#d8b4fe" },
+  // Severity danger-level styling configuration
+  const severityConfig: Record<
+    AlertSeverity,
+    {
+      border: string;
+      borderLeft: string;
+      bg: string;
+      text: string;
+      glow: string;
+      dangerScore: string;
+      dangerLabel: string;
+      dangerColor: string;
+      filledBars: number;
+    }
+  > = {
+    CRITICAL: {
+      border: "rgba(239, 68, 68, 0.7)",
+      borderLeft: "6px solid #ef4444",
+      bg: "linear-gradient(135deg, rgba(48, 12, 18, 0.88) 0%, rgba(15, 23, 42, 0.95) 100%)",
+      text: "#fca5a5",
+      glow: "0 8px 32px rgba(239, 68, 68, 0.28), inset 0 0 20px rgba(239, 68, 68, 0.08)",
+      dangerScore: "9.5/10",
+      dangerLabel: "CRITICAL DANGER",
+      dangerColor: "#ef4444",
+      filledBars: 5,
+    },
+    HIGH: {
+      border: "rgba(249, 115, 22, 0.65)",
+      borderLeft: "6px solid #f97316",
+      bg: "linear-gradient(135deg, rgba(38, 22, 12, 0.88) 0%, rgba(15, 23, 42, 0.95) 100%)",
+      text: "#fdba74",
+      glow: "0 8px 26px rgba(249, 115, 22, 0.22), inset 0 0 16px rgba(249, 115, 22, 0.06)",
+      dangerScore: "7.5/10",
+      dangerLabel: "HIGH DANGER",
+      dangerColor: "#f97316",
+      filledBars: 4,
+    },
+    MODERATE: {
+      border: "rgba(234, 179, 8, 0.55)",
+      borderLeft: "6px solid #eab308",
+      bg: "linear-gradient(135deg, rgba(32, 28, 12, 0.88) 0%, rgba(15, 23, 42, 0.95) 100%)",
+      text: "#fde047",
+      glow: "0 6px 22px rgba(234, 179, 8, 0.16), inset 0 0 14px rgba(234, 179, 8, 0.04)",
+      dangerScore: "5.0/10",
+      dangerLabel: "MODERATE RISK",
+      dangerColor: "#eab308",
+      filledBars: 3,
+    },
+    LOW: {
+      border: "rgba(34, 197, 94, 0.45)",
+      borderLeft: "6px solid #22c55e",
+      bg: "linear-gradient(135deg, rgba(12, 32, 22, 0.88) 0%, rgba(15, 23, 42, 0.95) 100%)",
+      text: "#86efac",
+      glow: "0 6px 18px rgba(34, 197, 94, 0.14), inset 0 0 12px rgba(34, 197, 94, 0.03)",
+      dangerScore: "2.5/10",
+      dangerLabel: "LOW RISK",
+      dangerColor: "#22c55e",
+      filledBars: 1,
+    },
+    INFO: {
+      border: "rgba(56, 189, 248, 0.45)",
+      borderLeft: "6px solid #38bdf8",
+      bg: "linear-gradient(135deg, rgba(12, 26, 42, 0.88) 0%, rgba(15, 23, 42, 0.95) 100%)",
+      text: "#7dd3fc",
+      glow: "0 6px 18px rgba(56, 189, 248, 0.14), inset 0 0 12px rgba(56, 189, 248, 0.03)",
+      dangerScore: "1.0/10",
+      dangerLabel: "ADVISORY",
+      dangerColor: "#38bdf8",
+      filledBars: 1,
+    },
   };
 
   const getCategoryIcon = (cat: string) => {
@@ -286,15 +350,21 @@ export function AlertsPage({
           </div>
         </div>
 
-        {/* Header Hero Banner */}
+        {/* Header Hero Banner with Dynamic Danger Level Glow */}
         <div
           style={{
             marginBottom: "2rem",
             padding: "clamp(1.2rem, 3vw, 1.8rem)",
-            background: "linear-gradient(135deg, rgba(30, 27, 75, 0.5) 0%, rgba(15, 23, 42, 0.8) 100%)",
-            border: "1px solid rgba(168, 85, 247, 0.3)",
+            background:
+              criticalCount > 0
+                ? "linear-gradient(135deg, rgba(60, 15, 25, 0.7) 0%, rgba(15, 23, 42, 0.9) 100%)"
+                : "linear-gradient(135deg, rgba(30, 27, 75, 0.5) 0%, rgba(15, 23, 42, 0.8) 100%)",
+            border: `1px solid ${criticalCount > 0 ? "rgba(239, 68, 68, 0.5)" : "rgba(168, 85, 247, 0.3)"}`,
             borderRadius: "14px",
-            boxShadow: "0 12px 36px -8px rgba(0, 0, 0, 0.5)",
+            boxShadow:
+              criticalCount > 0
+                ? "0 12px 36px -8px rgba(239, 68, 68, 0.35)"
+                : "0 12px 36px -8px rgba(0, 0, 0, 0.5)",
             display: "flex",
             flexWrap: "wrap",
             justifyContent: "space-between",
@@ -309,15 +379,15 @@ export function AlertsPage({
                   width: "28px",
                   height: "28px",
                   borderRadius: "6px",
-                  background: "rgba(168, 85, 247, 0.25)",
-                  border: "1px solid #a855f7",
+                  background: criticalCount > 0 ? "rgba(239, 68, 68, 0.25)" : "rgba(168, 85, 247, 0.25)",
+                  border: `1px solid ${criticalCount > 0 ? "#ef4444" : "#a855f7"}`,
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
                   color: "#FFFFFF",
                 }}
               >
-                <Bell size={15} />
+                {criticalCount > 0 ? <ShieldAlert size={16} /> : <Bell size={15} />}
               </div>
               <h1
                 style={{
@@ -414,10 +484,11 @@ export function AlertsPage({
           <div
             style={{
               padding: "1.1rem 1.2rem",
-              background: "rgba(15, 23, 42, 0.75)",
-              border: `1px solid ${criticalCount > 0 ? "rgba(239, 68, 68, 0.4)" : "rgba(255, 255, 255, 0.1)"}`,
+              background: criticalCount > 0 ? "rgba(48, 12, 18, 0.75)" : "rgba(15, 23, 42, 0.75)",
+              border: `1px solid ${criticalCount > 0 ? "rgba(239, 68, 68, 0.55)" : "rgba(255, 255, 255, 0.1)"}`,
               borderRadius: "10px",
               backdropFilter: "blur(8px)",
+              boxShadow: criticalCount > 0 ? "0 0 20px rgba(239, 68, 68, 0.2)" : "none",
             }}
           >
             <div style={{ fontSize: "11px", fontFamily: "var(--mono)", color: criticalCount > 0 ? "#fca5a5" : "#94a3b8", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "0.3rem" }}>
@@ -499,51 +570,53 @@ export function AlertsPage({
           </div>
         </div>
 
-        {/* Active Alerts List (Large, Clear, Horizontal Cards) */}
+        {/* Active Alerts List with Custom Danger-Level Border & Glow Architecture */}
         {filteredActiveAlerts.length > 0 ? (
-          <div style={{ display: "flex", flexDirection: "column", gap: "1rem", marginBottom: "3rem" }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: "1.2rem", marginBottom: "3rem" }}>
             {filteredActiveAlerts.map((alert) => {
-              const badge = severityBadges[alert.severity] || severityBadges.MODERATE;
+              const config = severityConfig[alert.severity] || severityConfig.MODERATE;
               return (
                 <div
                   key={alert.id}
                   style={{
-                    background: "rgba(15, 23, 42, 0.8)",
-                    border: `1px solid ${alert.isRead ? "rgba(255, 255, 255, 0.1)" : badge.border}`,
-                    borderLeft: `4px solid ${badge.border}`,
-                    borderRadius: "12px",
-                    padding: "clamp(1.1rem, 2.5vw, 1.6rem)",
-                    backdropFilter: "blur(12px)",
-                    boxShadow: "0 10px 30px rgba(0, 0, 0, 0.4)",
-                    transition: "transform 0.2s ease, border-color 0.2s ease",
+                    background: config.bg,
+                    border: `1px solid ${config.border}`,
+                    borderLeft: config.borderLeft,
+                    borderRadius: "14px",
+                    padding: "clamp(1.2rem, 2.5vw, 1.8rem)",
+                    backdropFilter: "blur(14px)",
+                    boxShadow: config.glow,
+                    transition: "transform 0.2s ease, box-shadow 0.2s ease",
                     position: "relative",
+                    overflow: "hidden",
                   }}
                 >
-                  {/* Top Metadata Row */}
+                  {/* Top Metadata & Danger Level Header Row */}
                   <div
                     style={{
                       display: "flex",
                       flexWrap: "wrap",
                       alignItems: "center",
                       justifyContent: "space-between",
-                      gap: "0.6rem",
-                      marginBottom: "0.75rem",
+                      gap: "0.8rem",
+                      marginBottom: "0.9rem",
                     }}
                   >
-                    <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "0.6rem", flexWrap: "wrap" }}>
+                      {/* Danger Level Pill Badge */}
                       <span
                         style={{
                           display: "inline-flex",
                           alignItems: "center",
-                          gap: "0.3rem",
-                          padding: "2px 7px",
-                          borderRadius: "4px",
-                          background: badge.bg,
-                          border: `1px solid ${badge.border}`,
-                          color: badge.text,
+                          gap: "0.35rem",
+                          padding: "3px 9px",
+                          borderRadius: "5px",
+                          background: `${config.dangerColor}22`,
+                          border: `1px solid ${config.dangerColor}80`,
+                          color: config.text,
                           fontFamily: "var(--mono)",
-                          fontSize: "10.5px",
-                          fontWeight: 700,
+                          fontSize: "11px",
+                          fontWeight: 800,
                           letterSpacing: "0.06em",
                           textTransform: "uppercase",
                         }}
@@ -552,9 +625,45 @@ export function AlertsPage({
                         <span>{alert.severity}</span>
                       </span>
 
+                      {/* Danger Severity Gauge (5-bar meter) */}
+                      <div
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: "3px",
+                          padding: "3px 8px",
+                          background: "rgba(0, 0, 0, 0.4)",
+                          border: `1px solid ${config.dangerColor}40`,
+                          borderRadius: "5px",
+                          fontSize: "10.5px",
+                          fontFamily: "var(--mono)",
+                        }}
+                      >
+                        <span style={{ color: "#94a3b8", marginRight: "4px" }}>DANGER:</span>
+                        <div style={{ display: "flex", gap: "2px" }}>
+                          {[1, 2, 3, 4, 5].map((barIdx) => (
+                            <span
+                              key={barIdx}
+                              style={{
+                                width: "5px",
+                                height: "10px",
+                                borderRadius: "1px",
+                                background:
+                                  barIdx <= config.filledBars
+                                    ? config.dangerColor
+                                    : "rgba(255, 255, 255, 0.1)",
+                              }}
+                            />
+                          ))}
+                        </div>
+                        <span style={{ color: config.dangerColor, fontWeight: 700, marginLeft: "4px" }}>
+                          {config.dangerScore}
+                        </span>
+                      </div>
+
                       <span
                         style={{
-                          fontSize: "10.5px",
+                          fontSize: "11px",
                           fontFamily: "var(--mono)",
                           color: "#94a3b8",
                           textTransform: "uppercase",
@@ -580,19 +689,20 @@ export function AlertsPage({
                       </span>
                     </div>
 
-                    <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", fontSize: "11px", color: "#64748b", fontFamily: "var(--mono)" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", fontSize: "11.5px", color: "#94a3b8", fontFamily: "var(--mono)" }}>
                       <Clock size={12} />
                       <span>{new Date(alert.lastUpdated).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} IST</span>
                     </div>
                   </div>
 
-                  {/* Title & Human Summary */}
+                  {/* Title & Detailed Explanation */}
                   <h3
                     style={{
-                      fontSize: "clamp(16px, 1.8vw, 18.5px)",
-                      fontWeight: 700,
+                      fontSize: "clamp(17px, 2vw, 20px)",
+                      fontWeight: 800,
                       color: "#FFFFFF",
-                      marginBottom: "0.45rem",
+                      marginBottom: "0.5rem",
+                      letterSpacing: "-0.01em",
                     }}
                   >
                     {alert.title}
@@ -600,33 +710,33 @@ export function AlertsPage({
 
                   <p
                     style={{
-                      fontSize: "13.5px",
-                      lineHeight: 1.55,
-                      color: "#cbd5e1",
-                      marginBottom: "1rem",
+                      fontSize: "14px",
+                      lineHeight: 1.6,
+                      color: "#e2e8f0",
+                      marginBottom: "1.1rem",
                     }}
                   >
                     {alert.summary}
                   </p>
 
-                  {/* Recommendation Cardlet */}
+                  {/* Recommended Action Box with Accentuated Danger Border */}
                   <div
                     style={{
-                      padding: "0.75rem 1rem",
-                      background: "rgba(30, 27, 75, 0.35)",
-                      border: "1px solid rgba(168, 85, 247, 0.25)",
+                      padding: "0.85rem 1.1rem",
+                      background: "rgba(0, 0, 0, 0.4)",
+                      border: `1px solid ${config.dangerColor}50`,
                       borderRadius: "8px",
-                      marginBottom: "1.1rem",
-                      fontSize: "12.5px",
-                      lineHeight: 1.45,
-                      color: "#e2e8f0",
+                      marginBottom: "1.2rem",
+                      fontSize: "13px",
+                      lineHeight: 1.5,
+                      color: "#f8fafc",
                     }}
                   >
-                    <strong style={{ color: "#c084fc" }}>Recommended Action: </strong>
+                    <strong style={{ color: config.dangerColor }}>RECOMMENDED PROTOCOL: </strong>
                     {alert.recommendedAction}
                   </div>
 
-                  {/* Bottom Footer Actions */}
+                  {/* Bottom Footer Telemetry & Details Action */}
                   <div
                     style={{
                       display: "flex",
@@ -634,11 +744,11 @@ export function AlertsPage({
                       justifyContent: "space-between",
                       alignItems: "center",
                       gap: "0.8rem",
-                      borderTop: "1px solid rgba(255, 255, 255, 0.08)",
-                      paddingTop: "0.85rem",
+                      borderTop: `1px solid rgba(255, 255, 255, 0.08)`,
+                      paddingTop: "0.9rem",
                     }}
                   >
-                    <div style={{ display: "flex", alignItems: "center", gap: "0.8rem", fontSize: "11.5px", fontFamily: "var(--mono)", color: "#94a3b8" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "1rem", fontSize: "12px", fontFamily: "var(--mono)", color: "#94a3b8" }}>
                       {alert.metrics.aqi && (
                         <span>
                           AQI: <strong style={{ color: "#FFFFFF" }}>{alert.metrics.aqi}</strong>
@@ -646,11 +756,11 @@ export function AlertsPage({
                       )}
                       {alert.metrics.pm25 && (
                         <span>
-                          PM2.5: <strong style={{ color: "#FFFFFF" }}>{alert.metrics.pm25} µg/m³</strong>
+                          PM2.5: <strong style={{ color: "#f87171" }}>{alert.metrics.pm25} µg/m³</strong>
                         </span>
                       )}
                       <span>
-                        Impact: <strong style={{ color: badge.text }}>{alert.impactLevel}</strong>
+                        Impact: <strong style={{ color: config.text }}>{alert.impactLevel}</strong>
                       </span>
                     </div>
 
@@ -661,15 +771,15 @@ export function AlertsPage({
                         style={{
                           display: "inline-flex",
                           alignItems: "center",
-                          gap: "0.35rem",
-                          padding: "0.45rem 0.95rem",
+                          gap: "0.4rem",
+                          padding: "0.45rem 1rem",
                           borderRadius: "6px",
-                          background: "rgba(168, 85, 247, 0.2)",
-                          border: "1px solid rgba(168, 85, 247, 0.4)",
+                          background: `${config.dangerColor}25`,
+                          border: `1px solid ${config.dangerColor}70`,
                           color: "#FFFFFF",
                           fontFamily: "var(--mono)",
                           fontSize: "11.5px",
-                          fontWeight: 600,
+                          fontWeight: 700,
                           cursor: "pointer",
                           transition: "all 0.2s ease",
                         }}
@@ -749,56 +859,35 @@ export function AlertsPage({
                   <span style={{ fontFamily: "var(--mono)", fontSize: "11px", color: "#64748b" }}>
                     {new Date(hist.lastUpdated).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} IST
                   </span>
-                  <span
-                    style={{
-                      padding: "2px 6px",
-                      borderRadius: "4px",
-                      background: "rgba(255, 255, 255, 0.06)",
-                      border: "1px solid rgba(255, 255, 255, 0.1)",
-                      fontFamily: "var(--mono)",
-                      fontSize: "10px",
-                      color: "#94a3b8",
-                    }}
-                  >
-                    {hist.severity}
-                  </span>
-                  <span style={{ fontSize: "12.5px", fontWeight: 600, color: "#e2e8f0" }}>
-                    {hist.title}
-                  </span>
-                  <span style={{ fontSize: "11.5px", color: "#64748b" }}>
-                    • {hist.location}
-                  </span>
+                  <span style={{ fontWeight: 600, fontSize: "13px", color: "#cbd5e1" }}>{hist.title}</span>
                 </div>
-
-                <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", fontSize: "11px", color: "#22c55e", fontFamily: "var(--mono)" }}>
-                  <span>{t.statusResolved}</span>
-                  <ChevronRight size={13} />
-                </div>
+                <ChevronRight size={14} style={{ color: "#64748b" }} />
               </div>
             ))}
           </div>
         </div>
       </div>
 
-      {/* Alert Detail Modal */}
-      {selectedAlert && (
-        <AlertDetailModal
-          alert={selectedAlert}
-          language={language}
-          onClose={() => setSelectedAlert(null)}
-          onNavigate={(page) => {
-            if (onNavigate) onNavigate(page);
-          }}
-        />
-      )}
-
-      {/* Alert Settings Modal */}
+      {/* Settings Modal */}
       {showSettings && (
         <AlertSettingsModal
           settings={settings}
-          language={language}
-          onSave={handleSaveSettings}
+          language={language as AlertLanguage}
           onClose={() => setShowSettings(false)}
+          onSave={handleSaveSettings}
+        />
+      )}
+
+      {/* Detail Modal */}
+      {selectedAlert && (
+        <AlertDetailModal
+          alert={selectedAlert}
+          language={language as AlertLanguage}
+          onClose={() => setSelectedAlert(null)}
+          onNavigate={(page) => {
+            setSelectedAlert(null);
+            if (onNavigate) onNavigate(page);
+          }}
         />
       )}
     </div>

@@ -8,6 +8,7 @@ import {
   Bot,
   Bell,
   Download,
+  Truck,
 } from "lucide-react";
 
 import type { Feeds } from "@/hooks/useForecastData";
@@ -20,6 +21,7 @@ export type PageType =
   | "historic-data"
   | "atmospheric-dynamics"
   | "exposure-tracker"
+  | "transports"
   | "health-assistant"
   | "alerts"
   | "report";
@@ -165,6 +167,7 @@ export function Rail({
               { id: "historic-data", label: t("navigation.historic"), icon: History },
               { id: "atmospheric-dynamics", label: t("navigation.atmosphere"), icon: CloudRain },
               { id: "exposure-tracker", label: t("navigation.exposure"), icon: HeartPulse },
+              { id: "transports", label: t("navigation.transports") || "Transports", icon: Truck },
               { id: "health-assistant", label: t("navigation.healthAssistant"), icon: Bot },
             ].map((btn) => {
               const isActive = currentPage === btn.id;

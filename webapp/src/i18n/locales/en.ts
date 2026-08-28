@@ -5,6 +5,7 @@ export const en = {
     historic: "Historic",
     atmosphere: "Atmosphere",
     exposure: "Exposure",
+    transports: "Transports",
     healthAssistant: "Health Assistant",
     alerts: "Alerts",
     report: "AQI Report",

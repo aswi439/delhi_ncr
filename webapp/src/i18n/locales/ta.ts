@@ -5,6 +5,7 @@ export const ta = {
     historic: "வரலாற்று தரவு",
     atmosphere: "வளிமண்டலம்",
     exposure: "மாசு வெளிப்பாடு",
+    transports: "போக்குவரத்து",
     healthAssistant: "சுகாதார உதவியாளர்",
     alerts: "எச்சரிக்கைகள்",
     report: "AQI அறிக்கை",

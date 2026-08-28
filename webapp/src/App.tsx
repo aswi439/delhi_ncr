@@ -2,7 +2,6 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 import { Boot } from "@/components/Boot";
 import { ConsensusDashboard } from "@/components/ConsensusDashboard";
-import { SourceApportionment } from "@/components/SourceApportionment";
 import { HazeField } from "@/components/HazeField";
 import { Hero } from "@/components/Hero";
 import { Rail, type PageType } from "@/components/Rail";
@@ -12,6 +11,7 @@ import { ForecastDataPage } from "@/components/ForecastDataPage";
 import { HistoricDataPage } from "@/components/HistoricDataPage";
 import { AtmosphericDynamicsPage } from "@/components/AtmosphericDynamicsPage";
 import { ExposureTrackerPage } from "@/components/ExposureTrackerPage";
+import { TransportPage } from "@/components/TransportPage";
 import { HealthCareAssistantPage } from "@/components/HealthCareAssistantPage";
 import { AlertsPage } from "@/components/AlertsPage";
 import { AqiReportPage } from "@/components/AqiReportPage";
@@ -69,6 +69,12 @@ export default function App() {
         return "exposure-tracker";
       }
       if (
+        window.location.hash === "#transports" ||
+        window.location.hash === "#transport"
+      ) {
+        return "transports";
+      }
+      if (
         window.location.hash === "#health-assistant" ||
         window.location.hash === "#healthcare" ||
         window.location.hash === "#health"
@@ -114,6 +120,11 @@ export default function App() {
       ) {
         setCurrentPage("exposure-tracker");
       } else if (
+        window.location.hash === "#transports" ||
+        window.location.hash === "#transport"
+      ) {
+        setCurrentPage("transports");
+      } else if (
         window.location.hash === "#health-assistant" ||
         window.location.hash === "#healthcare" ||
         window.location.hash === "#health"
@@ -148,6 +159,8 @@ export default function App() {
         ? "atmospheric-dynamics"
         : page === "exposure-tracker"
         ? "exposure-tracker"
+        : page === "transports"
+        ? "transports"
         : page === "health-assistant"
         ? "health-assistant"
         : page === "alerts"
@@ -282,6 +295,13 @@ export default function App() {
           cityAggregate={cityAggregate.data}
           onBack={() => handlePageChange("overview")}
         />
+      ) : currentPage === "transports" ? (
+        <TransportPage
+          hour={hour}
+          consensus={consensus.data}
+          cityAggregate={cityAggregate.data}
+          onBack={() => handlePageChange("overview")}
+        />
       ) : currentPage === "health-assistant" ? (
         <HealthCareAssistantPage
           forecast={data.forecast}
@@ -342,8 +362,6 @@ export default function App() {
 
           {/* 2. Delhi NCR Live Condition */}
           <div id="consensus-dashboard">
-
-
             <ConsensusDashboard
               data={consensus.data}
               loading={consensus.status === "loading"}
@@ -364,15 +382,7 @@ export default function App() {
             />
           </div>
 
-          {/* 4. Dynamic Source Apportionment & 72-Hour Predictive Time-Series */}
-          <div id="source-apportionment" style={{ marginTop: "clamp(3.5rem, 6vw, 5.5rem)", marginBottom: "clamp(3.5rem, 6vw, 5.5rem)" }}>
-            <SourceApportionment
-              currentPm25={cityAggregate.data?.sub_indices?.["PM2.5"]?.conc ?? (consensus.data?.metrics?.pm25 ?? pm25 ?? 50)}
-              currentNo2={cityAggregate.data?.sub_indices?.["NO2"]?.conc ?? (consensus.data?.metrics?.no2 ?? 38.5)}
-            />
-          </div>
-
-          {/* 5. List All Live Stations */}
+          {/* 4. List All Live Stations */}
           <div id="stations-grid">
             <Stations stations={data.stations} overview={data.overview} />
           </div>

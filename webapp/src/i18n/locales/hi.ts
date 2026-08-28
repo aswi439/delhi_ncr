@@ -5,6 +5,7 @@ export const hi = {
     historic: "ऐतिहासिक",
     atmosphere: "वायुमंडल",
     exposure: "प्रदूषण प्रभाव",
+    transports: "परिवहन",
     healthAssistant: "स्वास्थ्य सहायक",
     alerts: "अलर्ट और चेतावनी",
     report: "AQI रिपोर्ट",
